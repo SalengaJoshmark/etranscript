@@ -93,7 +93,7 @@ $student_id = $student['student_id'];
     <a href="student_dashboard.php">🏠 Home</a>
     <a href="new_request.php">📝 New Request</a>
     <a href="my_requests.php" style="background:#3b82f6;">📄 My Requests</a>
-    <a href="profile.php">👤 Profile</a>
+    <a href="student_profile.php">👤 Profile</a>
   </div>
   <div class="right">
     <a href="logout.php" class="logout">Logout</a>

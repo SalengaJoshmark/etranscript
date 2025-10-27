@@ -50,7 +50,7 @@
       padding: 45px 50px;
       border-radius: 14px;
       box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      width: 380px;
+      width: 400px;
       text-align: center;
       animation: fadeIn 0.5s ease-in-out;
       margin-top: 60px;
@@ -67,7 +67,7 @@
       font-size: 22px;
     }
 
-    input[type="text"], input[type="email"], input[type="password"] {
+    input[type="text"], input[type="email"], input[type="password"], select {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
@@ -75,6 +75,12 @@
       border-radius: 6px;
       font-size: 14px;
       box-sizing: border-box;
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+      font-size: 14px;
+      width: 100%;
     }
 
     /* --- Password Field Styling --- */
@@ -156,14 +162,36 @@
   </div>
 
   <div class="register-box">
-    <h2>Create Student Account</h2>
+    <h2>Create Account</h2>
 
-    <form method="POST" action="register_process.php">
+    <form method="POST" action="register_process.php" enctype="multipart/form-data">
+      <!-- Role -->
+      <select name="role" required onchange="toggleRoleFields(this.value)">
+        <option value="" disabled selected>Select Account Type</option>
+        <option value="student">Student</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <!-- Shared Fields -->
       <input type="text" name="full_name" placeholder="Full Name" required>
-      <input type="text" name="course" placeholder="Course (e.g., BSIT)" required>
-      <input type="text" name="student_number" placeholder="Student Number" required>
       <input type="email" name="email" placeholder="Email Address" required>
 
+      <!-- ✅ Admin Only Fields -->
+      <div id="adminFields" style="display:none;">
+        <input type="text" name="username" placeholder="Admin Username">
+      </div>
+
+      <!-- ✅ Student Only Fields -->
+      <div id="studentFields">
+        <input type="text" name="course" placeholder="Course (e.g., BSIT)">
+        <input type="text" name="student_number" placeholder="Student Number">
+      </div>
+
+      <!-- Profile Picture -->
+      <label style="display:block; text-align:left; font-size:13px; margin-top:10px;">Upload Profile Picture:</label>
+      <input type="file" name="profile_picture" accept="image/*">
+
+      <!-- Password Fields -->
       <div class="password-container">
         <input type="password" name="password" id="password" placeholder="Password" required>
         <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
@@ -193,6 +221,23 @@
       field.type = isVisible ? "password" : "text";
       icon.classList.toggle("fa-eye");
       icon.classList.toggle("fa-eye-slash");
+    }
+
+    // ✅ Toggle visibility of fields depending on selected role
+    function toggleRoleFields(role) {
+      const studentFields = document.getElementById("studentFields");
+      const adminFields = document.getElementById("adminFields");
+
+      if (role === "student") {
+        studentFields.style.display = "block";
+        adminFields.style.display = "none";
+      } else if (role === "admin") {
+        studentFields.style.display = "none";
+        adminFields.style.display = "block";
+      } else {
+        studentFields.style.display = "none";
+        adminFields.style.display = "none";
+      }
     }
   </script>
 

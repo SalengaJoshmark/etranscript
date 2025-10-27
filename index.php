@@ -226,7 +226,7 @@
       <button type="submit">Login</button>
     </form>
 
-    <div class="toggle-link" id="switchLink" onclick="toggleLogin()">Login as Registrar</div>
+    <div class="toggle-link" id="switchLink" onclick="toggleLogin()">Login as Admin</div>
 
     <div class="forgot-password">
       <a href="forgot_password.php">Forgot Password?</a>
@@ -250,12 +250,12 @@
 
       if (roleInput.value === "student") {
         roleInput.value = "admin";
-        title.textContent = "Registrar Login";
+        title.textContent = "Admin Login";
         switchLink.textContent = "Login as Student";
       } else {
         roleInput.value = "student";
         title.textContent = "Student Login";
-        switchLink.textContent = "Login as Registrar";
+        switchLink.textContent = "Login as Admin";
       }
     }
 
