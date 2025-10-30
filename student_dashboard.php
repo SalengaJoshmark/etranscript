@@ -67,18 +67,14 @@ $student_id = $student['student_id'];
   }
 
   .logout {
-    background: white;
-    color: #1e40af;
-    padding: 6px 14px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: 0.3s;
-  }
-
-  .logout:hover {
-    background: #e2e8f0;
-  }
+      background: #adc0ffff;
+      color: #af1e1eff;
+      padding: 8px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .logout:hover { background: #e5dedfff; }
 
   .container {
     background: white;

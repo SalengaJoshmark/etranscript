@@ -128,6 +128,18 @@ $stmt->close();
   }
   tr:hover { background-color: #eff6ff; }
 
+  /* STATUS COLORS */
+  .status {
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    min-width: 90px;
+  }
+  .status.pending { background-color: #fef3c7; color: #b45309; }   /* Yellow */
+  .status.approved { background-color: #dcfce7; color: #166534; }  /* Green */
+  .status.rejected { background-color: #fee2e2; color: #b91c1c; }  /* Red */
+
   /* BUTTONS */
   .btn {
     padding: 6px 12px;
@@ -142,36 +154,6 @@ $stmt->close();
   }
   .btn.view { background: #2563eb; }
   .btn.view:hover { background: #1d4ed8; }
-  .btn.approve { background: #16a34a; }
-  .btn.approve:hover { background: #15803d; }
-  .btn.reject { background: #dc2626; }
-  .btn.reject:hover { background: #b91c1c; }
-
-  /* Disabled buttons with tooltip */
-  .btn.disabled {
-    background: #94a3b8 !important;
-    cursor: not-allowed;
-    pointer-events: none;
-    opacity: 0.8;
-    position: relative;
-  }
-  .btn.disabled::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 130%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1e3a8a;
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 5px;
-    font-size: 12px;
-    opacity: 0;
-    white-space: nowrap;
-    pointer-events: none;
-    transition: opacity 0.3s;
-  }
-  .btn.disabled:hover::after { opacity: 1; }
 
   @media (max-width: 768px) {
     .nav { flex-direction: column; align-items: center; }
@@ -197,11 +179,13 @@ $stmt->close();
   </div>
 
   <div class="nav">
-    <a href="admin_dashboard.php">🏠 Home</a>
-    <a href="manage_request.php">📂 Manage Requests</a>
-    <a href="student_list.php">🎓 Students List</a>
-    <a href="admin_profile.php">👤 Profile</a>
-  </div>
+  <a href="admin_dashboard.php">🏠 Home</a>
+  <a href="manage_request.php">📂 Manage Requests</a>
+  <a href="student_list.php">🎓 Students List</a>
+  <a href="transaction_log.php">🕒 Transaction Logs</a>
+  <a href="admin_profile.php">👤 Profile</a>
+</div>
+
 
   <!-- Transcript Requests -->
   <div class="section-card">
@@ -224,22 +208,15 @@ $stmt->close();
 
       if (mysqli_num_rows($result) > 0) {
           while ($row = mysqli_fetch_assoc($result)) {
-              $disabled = ($row['status'] == 'Approved' || $row['status'] == 'Rejected');
-              $tooltip = $row['status'] == 'Approved' ? 'Already approved' : ($row['status'] == 'Rejected' ? 'Already rejected' : '');
+              $statusClass = strtolower($row['status']);
               echo "<tr>
                       <td>{$row['request_id']}</td>
                       <td>{$row['full_name']}</td>
                       <td>{$row['purpose']}</td>
                       <td>{$row['request_date']}</td>
-                      <td>{$row['status']}</td>
+                      <td><span class='status {$statusClass}'>" . htmlspecialchars($row['status']) . "</span></td>
                       <td>
                         <a href='view_request.php?id={$row['request_id']}' class='btn view'>View</a>
-                        <a href='approve_request.php?id={$row['request_id']}' 
-                           class='btn approve " . ($disabled ? 'disabled' : '') . "'
-                           data-tooltip='$tooltip'>Approve</a>
-                        <a href='reject_request.php?id={$row['request_id']}' 
-                           class='btn reject " . ($disabled ? 'disabled' : '') . "'
-                           data-tooltip='$tooltip'>Reject</a>
                       </td>
                     </tr>";
           }

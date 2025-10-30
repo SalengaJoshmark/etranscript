@@ -8,18 +8,18 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
     exit();
 }
 
-// Handle request actions (approve/reject)
+// Handle rejection only (approval now handled in view_request.php)
 if (isset($_GET['action'], $_GET['id'])) {
     $action = $_GET['action'];
     $id = intval($_GET['id']);
 
-    $status = ($action === 'approve') ? 'Approved' : (($action === 'reject') ? 'Rejected' : '');
-    if (!empty($status)) {
+    if ($action === 'reject') {
+        $status = 'Rejected';
         $stmt = $conn->prepare("UPDATE request SET status=? WHERE request_id=?");
         $stmt->bind_param("si", $status, $id);
         $stmt->execute();
         $stmt->close();
-        $_SESSION['success_message'] = "Request #$id marked as $status.";
+        $_SESSION['success_message'] = "Request #$id marked as Rejected.";
         header("Location: manage_requests.php");
         exit();
     }
@@ -148,10 +148,11 @@ $result = mysqli_query($conn, $sql);
 <div class="navbar">
   <div class="logo">E-Transcript System</div>
   <div class="links">
-    <a href="admin_dashboard.php">🏠 Home</a>
-    <a href="manage_requests.php">📂 Manage Requests</a>
-    <a href="student_list.php">🎓 Students List</a>
-    <a href="admin_profile.php">👤 Profile</a>
+   <a href="admin_dashboard.php">🏠 Home</a>
+  <a href="manage_request.php">📂 Manage Requests</a>
+  <a href="student_list.php">🎓 Students List</a>
+  <a href="transaction_log.php">🕒 Transaction Logs</a>
+  <a href="admin_profile.php">👤 Profile</a>
   </div>
   <a href="logout.php" class="logout">Logout</a>
 </div>
@@ -197,10 +198,23 @@ $result = mysqli_query($conn, $sql);
                     <td>{$row['request_date']}</td>
                     <td style='color:$status_color;font-weight:bold;'>{$row['status']}</td>
                     <td>
-                      <a href='view_request.php?id={$row['request_id']}' class='btn view'>View</a>
-                      <a href='manage_requests.php?action=approve&id={$row['request_id']}' class='btn approve' onclick='return confirm(\"Approve this request?\")'>Approve</a>
-                      <a href='manage_requests.php?action=reject&id={$row['request_id']}' class='btn reject' onclick='return confirm(\"Reject this request?\")'>Reject</a>
-                    </td>
+                    <a href='view_request.php?id={$row['request_id']}' class='btn view'>View</a>
+                    ";
+
+                    if ($row['status'] == 'Pending') {
+                        echo "
+                        <a href='view_request.php?id={$row['request_id']}' class='btn approve'>Approve</a>
+                        <a href='manage_requests.php?action=reject&id={$row['request_id']}' class='btn reject' onclick='return confirm(\"Reject this request?\")'>Reject</a>
+                        ";
+                    } else {
+                        echo "
+                        <button class='btn approve' style='opacity:0.5;cursor:not-allowed;' disabled>Approve</button>
+                        <button class='btn reject' style='opacity:0.5;cursor:not-allowed;' disabled>Reject</button>
+                        ";
+                    }
+
+                    echo "
+                  </td>
                   </tr>";
         }
     } else {

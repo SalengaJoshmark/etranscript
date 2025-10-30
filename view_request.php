@@ -10,7 +10,15 @@ if (!isset($_SESSION['user'])) {
 
 $user_role = $_SESSION['user'];
 $email = $_SESSION['email'] ?? '';
-$back_link = ($user_role === 'admin') ? 'admin_dashboard.php' : 'student_dashboard.php';
+$logout_link = "logout.php";
+
+// ✅ Detect source for back button
+$source = $_GET['source'] ?? '';
+if ($user_role === 'admin') {
+    $back_link = ($source === 'manage') ? 'manage_request.php' : 'admin_dashboard.php';
+} else {
+    $back_link = 'student_dashboard.php';
+}
 
 // Ensure request ID exists
 if (!isset($_GET['id'])) {
@@ -108,7 +116,7 @@ $row = mysqli_fetch_assoc($result);
   <h1>Request Details</h1>
   <div class="right-section">
     <div class="clock" id="clock"></div>
-    <a href="<?= $back_link ?>" class="logout">Back</a>
+    <a href="<?= $logout_link ?>" class="logout">Logout</a>
   </div>
 </div>
 
@@ -139,11 +147,24 @@ $row = mysqli_fetch_assoc($result);
   </div>
 
   <?php if ($user_role === 'admin' && $row['status'] == 'Pending'): ?>
-    <a href="#" class="btn approve" onclick="confirmAction('approve', <?= $row['request_id'] ?>)">Approve</a>
-    <a href="#" class="btn reject" onclick="confirmAction('reject', <?= $row['request_id'] ?>)">Reject</a>
+    <a href="approve_request.php?id=<?= $row['request_id'] ?>" class="btn approve"
+       onclick="return confirm('Are you sure you want to approve this request? This will automatically generate a PDF.');">
+       Approve
+    </a>
+    <a href="reject_request.php?id=<?= $row['request_id'] ?>" class="btn reject"
+       onclick="return confirm('Are you sure you want to reject this request?');">
+       Reject
+    </a>
   <?php endif; ?>
 
-  <a href="<?= $back_link ?>" class="btn back">Back to Dashboard</a>
+  <div style="margin-top: 30px;">
+  <?php if ($user_role === 'admin'): ?>
+    <a href="manage_request.php" class="btn back" style="margin-right: 10px;">Back to Manage Requests</a>
+    <a href="admin_dashboard.php" class="btn back">Back to Dashboard</a>
+  <?php else: ?>
+    <a href="student_dashboard.php" class="btn back">Back to Dashboard</a>
+  <?php endif; ?>
+  </div>
 </div>
 
 <!-- JavaScript -->
@@ -163,15 +184,6 @@ function updateClock() {
 }
 setInterval(updateClock, 1000);
 updateClock();
-
-function confirmAction(action, id) {
-  let message = action === 'approve'
-    ? "Are you sure you want to approve this request?"
-    : "Are you sure you want to reject this request?";
-  if (confirm(message)) {
-    window.location.href = action + "_request.php?id=" + id;
-  }
-}
 </script>
 
 </body>

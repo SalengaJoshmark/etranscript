@@ -76,13 +76,26 @@ $student_id = $student['student_id'];
     color: #1e3a8a;
   }
 
-  .status {
-    font-weight: bold;
-  }
-
+  .status { font-weight: bold; }
   .status.Pending { color: orange; }
   .status.Approved { color: green; }
   .status.Rejected { color: red; }
+
+  .btn-doc {
+    color: #1e40af;
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #1e40af;
+    padding: 5px 8px;
+    border-radius: 5px;
+    transition: 0.2s;
+    display: inline-block;
+    margin: 2px;
+  }
+  .btn-doc:hover {
+    background: #1e40af;
+    color: white;
+  }
 </style>
 </head>
 <body>
@@ -110,7 +123,7 @@ $student_id = $student['student_id'];
       <th>Date Requested</th>
       <th>Status</th>
       <th>Remarks</th>
-      <th>Download</th>
+      <th>Documents</th>
     </tr>
     <?php
     $sql = "SELECT * FROM request WHERE student_id='$student_id' ORDER BY request_date DESC";
@@ -119,17 +132,30 @@ $student_id = $student['student_id'];
     if (mysqli_num_rows($res) > 0) {
       while ($r = mysqli_fetch_assoc($res)) {
         $status = htmlspecialchars($r['status']);
-        echo "<tr>
-                <td>{$r['request_id']}</td>
-                <td>{$r['purpose']}</td>
-                <td>{$r['request_date']}</td>
-                <td class='status {$status}'>{$status}</td>
-                <td>" . ($r['remarks'] ?? '—') . "</td>";
+        $pdfPath = "uploads/generated_pdfs/approval_" . $r['request_id'] . ".pdf";
 
-        if ($r['status'] == 'Approved') {
-          echo "<td><a href='uploads/{$r['file_name']}' style='color:#1e40af;text-decoration:none;'>Download</a></td>";
+        echo "<tr>
+                <td>" . htmlspecialchars($r['request_id']) . "</td>
+                <td>" . htmlspecialchars($r['purpose']) . "</td>
+                <td>" . htmlspecialchars($r['request_date']) . "</td>
+                <td class='status " . htmlspecialchars($status) . "'>" . htmlspecialchars($status) . "</td>
+                <td>" . (!empty($r['remarks']) ? htmlspecialchars($r['remarks']) : '—') . "</td>";
+
+        if ($status === 'Approved') {
+            echo "<td>";
+
+            // Only show the auto-generated approval PDF (if it exists)
+            if (file_exists($pdfPath)) {
+                $pdfUrl = htmlspecialchars($pdfPath);
+                echo "<a class='btn-doc' href='{$pdfUrl}' target='_blank'>View Approval Notice</a>";
+                echo "<a class='btn-doc' href='{$pdfUrl}' download>Download</a>";
+            } else {
+                echo "—";
+            }
+
+            echo "</td>";
         } else {
-          echo "<td>—</td>";
+            echo "<td>—</td>";
         }
 
         echo "</tr>";
