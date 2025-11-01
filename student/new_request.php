@@ -2,13 +2,13 @@
 session_start();
 include("../db_connect.php");
 
-// Ensure only students can access
+// ✅ Ensure only students can access
 if (!isset($_SESSION['user']) || $_SESSION['user'] != 'student') {
     header("Location: index.php");
     exit();
 }
 
-// Fetch student ID
+// ✅ Fetch student ID
 $email = $_SESSION['email'];
 $result = mysqli_query($conn, "SELECT student_id FROM student WHERE email='$email'");
 $row = mysqli_fetch_assoc($result);
@@ -68,10 +68,10 @@ $student_id = $row['student_id'];
       padding: 30px 40px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    h2 { color: #1e3a8a; margin-bottom: 20px; text-align: center; }
+    h2 { color: #1e3a8a; margin-bottom: 10px; text-align: center; }
 
     label { display: block; margin: 12px 0 6px; color: #334155; font-weight: 500; }
-    select, textarea, button, input[type="text"] {
+    select, textarea, button, input[type="text"], input[type="date"] {
       width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;
     }
     button {
@@ -79,6 +79,16 @@ $student_id = $row['student_id'];
       font-weight: 500; cursor: pointer;
     }
     button:hover { background: #1d4ed8; }
+
+    .notice {
+      text-align:center;
+      color:#475569;
+      background:#f1f5f9;
+      padding:10px;
+      border-radius:6px;
+      font-size:14px;
+      margin-bottom:20px;
+    }
   </style>
 </head>
 <body>
@@ -100,6 +110,11 @@ $student_id = $row['student_id'];
 
 <div class="container">
   <h2>Submit a New Request</h2>
+
+  <p class="notice">
+    ⚠️ All requests are reviewed by your department faculty for verification before registrar approval. 
+    Processing time may vary depending on document type and faculty availability.
+  </p>
 
   <form method="POST" action="../submit_request.php">
     <label for="purpose">Purpose of Request:</label>
@@ -123,8 +138,24 @@ $student_id = $row['student_id'];
       <option value="Email">Email</option>
     </select>
 
+    <p id="estimated_time" style="color:#475569;font-size:13px;margin-top:5px;">
+      ⏳ Estimated processing time: 2–3 business days.
+    </p>
+
+    <label for="date_needed">Date Needed (optional):</label>
+    <input type="date" name="date_needed" id="date_needed">
+
     <label for="remarks">Remarks (optional):</label>
     <textarea name="remarks" id="remarks" rows="3" placeholder="Any additional notes..."></textarea>
+
+    <p id="summary" style="
+      margin-top:10px;
+      background:#f8fafc;
+      padding:10px;
+      border-radius:6px;
+      font-size:13px;
+      color:#334155;">
+    </p>
 
     <input type="hidden" name="student_id" value="<?= $student_id ?>">
 
@@ -142,7 +173,7 @@ $student_id = $row['student_id'];
   </form>
 </div>
 
-<!-- JS: Clock & Custom Purpose -->
+<!-- JS: Clock, Dynamic Estimate & Summary -->
 <script>
 function updateClock() {
   const now = new Date();
@@ -165,6 +196,33 @@ function toggleCustomPurpose(value) {
     document.getElementById('custom_purpose').required = false;
   }
 }
+
+// ✅ Dynamic estimated time & summary based on purpose
+document.getElementById('purpose').addEventListener('change', function() {
+  const estimate = document.getElementById('estimated_time');
+  const summary = document.getElementById('summary');
+  switch (this.value) {
+    case 'Transcript of Records':
+      estimate.textContent = "⏳ Estimated processing time: 5–7 business days (faculty verification required).";
+      summary.innerHTML = "Your transcript will first be verified by your department faculty to ensure accuracy before registrar approval.";
+      break;
+    case 'Certificate of Grades':
+      estimate.textContent = "⏳ Estimated processing time: 3–5 business days.";
+      summary.innerHTML = "Your grades will be reviewed by your department faculty for correctness prior to approval.";
+      break;
+    case 'Good Moral Certificate':
+      estimate.textContent = "⏳ Estimated processing time: 2–3 business days.";
+      summary.innerHTML = "Your request will be reviewed by faculty before registrar issuance.";
+      break;
+    case 'Other':
+      estimate.textContent = "⏳ Processing time may vary based on request details.";
+      summary.innerHTML = "Faculty will review your custom request before registrar approval.";
+      break;
+    default:
+      estimate.textContent = "⏳ Estimated processing time: 2–3 business days.";
+      summary.innerHTML = "";
+  }
+});
 </script>
 
 </body>

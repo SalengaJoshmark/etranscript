@@ -167,6 +167,7 @@ $stmt->close();
    <a href="user_list.php">👥 User Management</a>
     <a href="transaction_log.php" class="active">🕒 Transaction Logs</a>
     <a href="admin_profile.php">👤 Profile</a>
+    <a href="reset_system.php"> 📊 Database/File Management</a>
   </div>
 
   <h2>Recent Admin Actions</h2>

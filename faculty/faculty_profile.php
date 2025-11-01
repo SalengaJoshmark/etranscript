@@ -154,6 +154,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <div class="logo">E-Scription</div>
   <div class="links">
     <a href="faculty_dashboard.php">🏠 Home</a>
+    <a href="department_requests.php">📄 Department Requests</a>
     <a href="transaction_log.php">🕒 Transaction Logs</a>
     <a href="faculty_profile.php">👤 Profile</a>
   </div>

@@ -8,7 +8,7 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
     exit();
 }
 
-// Handle rejection only (approval now handled in view_request.php)
+// Handle rejection only
 if (isset($_GET['action'], $_GET['id'])) {
     $action = $_GET['action'];
     $id = intval($_GET['id']);
@@ -20,7 +20,7 @@ if (isset($_GET['action'], $_GET['id'])) {
         $stmt->execute();
         $stmt->close();
         $_SESSION['success_message'] = "Request #$id marked as Rejected.";
-        header("Location: manage_requests.php");
+        header("Location: manage_request.php");
         exit();
     }
 }
@@ -35,7 +35,6 @@ if ($filter !== 'All') {
     $sql .= " WHERE r.status = '$filter'";
 }
 $sql .= " ORDER BY r.request_date DESC";
-
 $result = mysqli_query($conn, $sql);
 ?>
 <!DOCTYPE html>
@@ -82,10 +81,7 @@ $result = mysqli_query($conn, $sql);
 
   h2 { color: #1e3a8a; }
 
-  .filter-buttons {
-    margin-bottom: 15px;
-  }
-
+  .filter-buttons { margin-bottom: 15px; }
   .filter-buttons a {
     text-decoration: none;
     padding: 8px 16px;
@@ -96,27 +92,15 @@ $result = mysqli_query($conn, $sql);
     margin-right: 8px;
     transition: 0.3s;
   }
+  .filter-buttons a.active { background: #1e40af; color: white; }
 
-  .filter-buttons a.active {
-    background: #1e40af;
-    color: white;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
+  table { width: 100%; border-collapse: collapse; }
   th, td {
     border: 1px solid #cbd5e1;
     padding: 10px;
     text-align: center;
   }
-
-  th {
-    background-color: #e0e7ff;
-    color: #1e3a8a;
-  }
+  th { background-color: #e0e7ff; color: #1e3a8a; }
 
   .btn {
     padding: 6px 12px;
@@ -125,13 +109,19 @@ $result = mysqli_query($conn, $sql);
     font-size: 14px;
     margin: 0 3px;
   }
-
   .view { background-color: #2563eb; color: white; }
   .approve { background-color: #16a34a; color: white; }
   .reject { background-color: #dc2626; color: white; }
   .view:hover { background-color: #1d4ed8; }
   .approve:hover { background-color: #15803d; }
   .reject:hover { background-color: #b91c1c; }
+
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #9ca3af;
+    color: white;
+  }
 
   .success {
     background: #d1fae5;
@@ -148,11 +138,12 @@ $result = mysqli_query($conn, $sql);
 <div class="navbar">
   <div class="logo">E-Scription</div>
   <div class="links">
-   <a href="admin_dashboard.php">🏠 Home</a>
-  <a href="manage_request.php">📂 Manage Requests</a>
-  <a href="user_list.php">👥 User Management</a>
-  <a href="transaction_log.php">🕒 Transaction Logs</a>
-  <a href="admin_profile.php">👤 Profile</a>
+    <a href="admin_dashboard.php">🏠 Home</a>
+    <a href="manage_request.php">📂 Manage Requests</a>
+    <a href="user_list.php">👥 User Management</a>
+    <a href="transaction_log.php">🕒 Transaction Logs</a>
+    <a href="admin_profile.php">👤 Profile</a>
+    <a href="reset_system.php"> 📊 Database/File Management</a>
   </div>
   <a href="../logout.php" class="logout">Logout</a>
 </div>
@@ -170,6 +161,7 @@ $result = mysqli_query($conn, $sql);
   <div class="filter-buttons">
     <a href="?status=All" class="<?= $filter=='All' ? 'active' : '' ?>">All</a>
     <a href="?status=Pending" class="<?= $filter=='Pending' ? 'active' : '' ?>">Pending</a>
+    <a href="?status=Checked" class="<?= $filter=='Checked' ? 'active' : '' ?>">Checked</a>
     <a href="?status=Approved" class="<?= $filter=='Approved' ? 'active' : '' ?>">Approved</a>
     <a href="?status=Rejected" class="<?= $filter=='Rejected' ? 'active' : '' ?>">Rejected</a>
   </div>
@@ -189,8 +181,10 @@ $result = mysqli_query($conn, $sql);
             $status_color = match ($row['status']) {
                 'Approved' => 'green',
                 'Rejected' => 'red',
+                'Checked' => 'blue',
                 default => 'orange'
             };
+
             echo "<tr>
                     <td>{$row['request_id']}</td>
                     <td>{$row['full_name']}</td>
@@ -198,24 +192,22 @@ $result = mysqli_query($conn, $sql);
                     <td>{$row['request_date']}</td>
                     <td style='color:$status_color;font-weight:bold;'>{$row['status']}</td>
                     <td>
-                    <a href='../view_request.php?id={$row['request_id']}' class='btn view'>View</a>
-                    ";
+                      <a href='../view_request.php?id={$row['request_id']}' class='btn view'>View</a>";
 
-                    if ($row['status'] == 'Pending') {
-                        echo "
-                        <a href='../view_request.php?id={$row['request_id']}' class='btn approve'>Approve</a>
-                        <a href='manage_requests.php?action=reject&id={$row['request_id']}' class='btn reject' onclick='return confirm(\"Reject this request?\")'>Reject</a>
-                        ";
-                    } else {
-                        echo "
-                        <button class='btn approve' style='opacity:0.5;cursor:not-allowed;' disabled>Approve</button>
-                        <button class='btn reject' style='opacity:0.5;cursor:not-allowed;' disabled>Reject</button>
-                        ";
-                    }
+            // ✅ Only enable Approve/Reject if Checked
+            if ($row['status'] === 'Checked') {
+                echo "
+                  <a href='../approve_request.php?id={$row['request_id']}' class='btn approve'>Approve</a>
+                  <a href='manage_request.php?action=reject&id={$row['request_id']}' class='btn reject' onclick='return confirm(\"Reject this request?\")'>Reject</a>
+                ";
+            } else {
+                echo "
+                  <button class='btn disabled'>Approve</button>
+                  <button class='btn disabled'>Reject</button>
+                ";
+            }
 
-                    echo "
-                  </td>
-                  </tr>";
+            echo "</td></tr>";
         }
     } else {
         echo "<tr><td colspan='6'>No requests found.</td></tr>";

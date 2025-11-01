@@ -12,37 +12,43 @@ $user_role = $_SESSION['user'];
 $email = $_SESSION['email'] ?? '';
 $logout_link = "logout.php";
 
-// ✅ Detect source for back button (for exit without changing UI)
+// ✅ Determine back links
 $source = $_GET['source'] ?? '';
 if ($user_role === 'admin') {
-    $back_link = ($source === 'manage') ? 'manage_request.php' : 'admin/admin_dashboard.php';
+    $back_link = ($source === 'manage') ? 'admin/manage_request.php' : 'admin/admin_dashboard.php';
 } elseif ($user_role === 'faculty') {
-    $back_link = 'faculty/faculty_dashboard.php';
+    $back_link = 'faculty/department_requests.php';
 } else {
     $back_link = 'student/student_dashboard.php';
 }
 
-// Ensure request ID exists
+// ✅ Ensure request ID exists
 if (!isset($_GET['id'])) {
     header("Location: $back_link");
     exit();
 }
 
-$request_id = $_GET['id'];
+$request_id = intval($_GET['id']);
 
-// Fetch full request details + student info
+// ✅ Fetch request + student info
 $sql = "SELECT r.*, s.full_name AS student_name, s.email, s.course
         FROM request r
         JOIN student s ON r.student_id = s.student_id
-        WHERE r.request_id = '$request_id'";
-$result = mysqli_query($conn, $sql);
+        WHERE r.request_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $request_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-if (mysqli_num_rows($result) == 0) {
+if ($result->num_rows === 0) {
     echo "<script>alert('Request not found!'); window.location='$back_link';</script>";
     exit();
 }
+$row = $result->fetch_assoc();
+$stmt->close();
 
-$row = mysqli_fetch_assoc($result);
+// ✅ Check if faculty already marked as "Checked"
+$is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) === 'checked');
 ?>
 
 <!DOCTYPE html>
@@ -91,10 +97,7 @@ $row = mysqli_fetch_assoc($result);
   }
 
   h2 { color: #1e3a8a; margin-bottom: 20px; }
-  .details p {
-    margin: 8px 0;
-    color: #334155;
-  }
+  .details p { margin: 8px 0; color: #334155; }
 
   .btn {
     display: inline-block;
@@ -110,6 +113,11 @@ $row = mysqli_fetch_assoc($result);
   .reject:hover { background: #b91c1c; }
   .back { background: #1e40af; color: white; }
   .back:hover { background: #1d4ed8; }
+
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -123,7 +131,8 @@ $row = mysqli_fetch_assoc($result);
 </div>
 
 <div class="container">
-  <h2>Request #<?= $row['request_id'] ?></h2>
+  <h2>Request #<?= htmlspecialchars($row['request_id']) ?></h2>
+
   <div class="details">
     <p><strong>Student Name:</strong> <?= htmlspecialchars($row['student_name']) ?></p>
     <p><strong>Email:</strong> <?= htmlspecialchars($row['email']) ?></p>
@@ -142,47 +151,102 @@ $row = mysqli_fetch_assoc($result);
     <p><strong>Status:</strong>
       <?php
         $status = htmlspecialchars($row['status']);
-        $color = ($status == 'Approved') ? '#16a34a' : (($status == 'Rejected') ? '#dc2626' : '#f59e0b');
+        $color = match ($status) {
+          'Approved' => '#16a34a',
+          'Rejected' => '#dc2626',
+          'Checked'  => '#0284c7',
+          default => '#f59e0b'
+        };
         echo "<span style='color: $color; font-weight: 600;'>$status</span>";
       ?>
     </p>
   </div>
 
-  <?php if ($user_role === 'admin' && $row['status'] == 'Pending'): ?>
-    <a href="approve_request.php?id=<?= $row['request_id'] ?>" class="btn approve"
-       onclick="return confirm('Are you sure you want to approve this request? This will automatically generate a PDF.');">
-       Approve
-    </a>
-    <a href="reject_request.php?id=<?= $row['request_id'] ?>" class="btn reject"
-       onclick="return confirm('Are you sure you want to reject this request?');">
-       Reject
-    </a>
+  <!-- ✅ Faculty Messages (visible to admin only) -->
+  <?php
+  // Fetch messages for this request
+  $msg_stmt = $conn->prepare("
+    SELECT fm.subject, fm.message, fm.sent_at, fm.is_read, f.full_name AS faculty_name
+    FROM faculty_messages fm
+    JOIN faculty f ON fm.faculty_id = f.faculty_id
+    WHERE fm.request_id = ?
+    ORDER BY fm.sent_at DESC
+  ");
+  $msg_stmt->bind_param("i", $request_id);
+  $msg_stmt->execute();
+  $messages = $msg_stmt->get_result();
+
+  // Mark as read when admin views
+  if ($user_role === 'admin' && $messages->num_rows > 0) {
+      $update_read = $conn->prepare("UPDATE faculty_messages SET is_read = 1 WHERE request_id = ?");
+      $update_read->bind_param("i", $request_id);
+      $update_read->execute();
+      $update_read->close();
+  }
+  ?>
+
+  <?php if ($messages->num_rows > 0): ?>
+    <div style="margin-top: 20px;">
+      <h3 style="color:#1e3a8a;">📩 Faculty Messages</h3>
+      <?php while ($msg = $messages->fetch_assoc()): ?>
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:8px; margin-bottom:10px;">
+          <p style="margin:0;">
+            <strong>Subject:</strong> <?= htmlspecialchars($msg['subject']); ?><br>
+            <strong>From:</strong> <?= htmlspecialchars($msg['faculty_name']); ?> 
+            <span style="font-size:12px; color:#475569;">(<?= htmlspecialchars($msg['sent_at']); ?>)</span>
+          </p>
+          <p style="margin-top:8px;"><?= nl2br(htmlspecialchars($msg['message'])); ?></p>
+          <?php if ($msg['is_read'] == 0): ?>
+            <p style="font-size:12px;color:#0284c7;"><em>Unread</em></p>
+          <?php endif; ?>
+        </div>
+      <?php endwhile; ?>
+    </div>
+  <?php endif; ?>
+
+  <?php $msg_stmt->close(); ?>
+
+  <!-- ✅ Admin: Approve/Reject only if faculty checked -->
+  <?php if ($user_role === 'admin'): ?>
+    <?php if ($is_checked_by_faculty): ?>
+      <a href="approve_request.php?id=<?= $row['request_id'] ?>" 
+         class="btn approve" 
+         onclick="return confirm('Approve this request? This will generate a PDF.');">
+         Approve
+      </a>
+      <a href="reject_request.php?id=<?= $row['request_id'] ?>" 
+         class="btn reject" 
+         onclick="return confirm('Reject this request?');">
+         Reject
+      </a>
+    <?php else: ?>
+      <button class="btn approve disabled">Approve (Waiting for Faculty)</button>
+      <button class="btn reject disabled">Reject (Waiting for Faculty)</button>
+    <?php endif; ?>
   <?php endif; ?>
 
   <div style="margin-top: 30px;">
-  <?php if ($user_role === 'admin'): ?>
-    <a href="admin/manage_request.php" class="btn back" style="margin-right: 10px;">Back to Manage Requests</a>
-    <a href="admin/admin_dashboard.php" class="btn back">Back to Dashboard</a>
-  <?php elseif ($user_role === 'faculty'): ?>
-    <a href="faculty/faculty_dashboard.php" class="btn back">Back to Dashboard</a>
-  <?php else: ?>
-    <a href="student/student_dashboard.php" class="btn back">Back to Dashboard</a>
-  <?php endif; ?>
+    <?php if ($user_role === 'admin'): ?>
+        <a href="admin/manage_request.php" class="btn back" style="margin-right: 10px;">📂 Back to Manage Requests</a>
+        <a href="admin/admin_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
+
+    <?php elseif ($user_role === 'faculty'): ?>
+        <a href="faculty/department_requests.php" class="btn back" style="margin-right: 10px;">📄 Back to Department Requests</a>
+        <a href="faculty/faculty_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
+
+    <?php else: ?>
+        <a href="student/student_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
+    <?php endif; ?>
   </div>
 </div>
 
-<!-- JavaScript -->
+<!-- JavaScript Clock -->
 <script>
 function updateClock() {
   const now = new Date();
   const formatted = now.toLocaleString('en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
   });
   document.getElementById('clock').innerHTML = formatted;
 }

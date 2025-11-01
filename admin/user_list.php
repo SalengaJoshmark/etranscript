@@ -226,6 +226,7 @@ $faculty = $stmt_faculty->get_result();
     <a href="user_list.php">👥 User Management</a>
     <a href="transaction_log.php">🕒 Transaction Logs</a>
     <a href="admin_profile.php">👤 Profile</a>
+    <a href="reset_system.php"> 📊 Database/File Management</a>
   </div>
   <a href="../logout.php" class="logout">Logout</a>
 </div>

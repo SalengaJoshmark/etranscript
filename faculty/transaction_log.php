@@ -2,26 +2,28 @@
 session_start();
 include("../db_connect.php");
 
-// Redirect if not logged in as faculty
+// ✅ Redirect if not logged in as faculty
 if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'faculty') {
     header("Location: ../index.php");
     exit();
 }
 
-// Get faculty info
+// ✅ Get faculty info
 $email = $_SESSION['email'];
 $faculty_name = "Faculty Member";
 $faculty_pic = "../uploads/profile_pics/default_avatar.png";
 $faculty_department = "";
+$faculty_dept_id = 0;
 
-// Fetch faculty details
-$stmt = $conn->prepare("SELECT full_name, profile_picture, department FROM faculty WHERE email = ?");
+// ✅ Fetch faculty details with department_id
+$stmt = $conn->prepare("SELECT full_name, profile_picture, department, department_id FROM faculty WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($row = $result->fetch_assoc()) {
     $faculty_name = $row['full_name'];
     $faculty_department = $row['department'];
+    $faculty_dept_id = $row['department_id'];
     if (!empty($row['profile_picture'])) {
         $faculty_pic = "../uploads/profile_pics/" . basename($row['profile_picture']);
     }
@@ -83,10 +85,6 @@ body {
 
 h2 { color:#1e3a8a; margin-bottom:15px; }
 
-.nav { display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }
-.nav a { text-decoration:none; color:#1e3a8a; font-weight:500; transition:0.3s; padding:6px 12px; border-radius:6px; background:#f0f4ff; }
-.nav a:hover, .nav a.active { background:#dbeafe; color:#1d4ed8; }
-
 table {
     width:100%;
     border-collapse:collapse;
@@ -112,6 +110,7 @@ tr:hover { background:#f1f5f9; }
     <div class="logo">E-Scription</div>
     <div class="links">
         <a href="faculty_dashboard.php">🏠 Home</a>
+        <a href="department_requests.php">📄 Department Requests</a>
         <a href="transaction_log.php" class="active">🕒 Transaction Logs</a>
         <a href="faculty_profile.php">👤 Profile</a>
     </div>
@@ -122,7 +121,8 @@ tr:hover { background:#f1f5f9; }
     <img src="<?= htmlspecialchars($faculty_pic); ?>" alt="Faculty" class="faculty-pic">
 
     <h2>Department Transaction Logs</h2>
-    <div class="section-title">📌 Recent Actions</div>
+    <div class="section-title">📌 Recent Actions for <?= htmlspecialchars($faculty_department); ?></div>
+
     <table>
         <tr>
             <th>Log ID</th>
@@ -132,23 +132,26 @@ tr:hover { background:#f1f5f9; }
             <th>Date & Time</th>
             <th>Remarks</th>
         </tr>
+
         <?php
-        $sql_logs = "SELECT 
-                        l.log_id, 
-                        s.full_name, 
-                        r.purpose, 
-                        l.action, 
-                        l.date_time, 
-                        l.remarks
-                     FROM transaction_log l
-                     JOIN request r ON l.request_id = r.request_id
-                     JOIN student s ON r.student_id = s.student_id
-                     WHERE s.course LIKE ?
-                     ORDER BY l.date_time DESC";
+        // ✅ Filter logs only for students in the same department as the faculty
+        $sql_logs = "
+            SELECT 
+                l.log_id,
+                s.full_name AS student_name,
+                l.purpose,
+                l.action,
+                l.date_time,
+                l.remarks
+            FROM transaction_log l
+            INNER JOIN request r ON l.request_id = r.request_id
+            INNER JOIN student s ON r.student_id = s.student_id
+            WHERE s.department_id = ?
+            ORDER BY l.date_time DESC
+        ";
 
         $stmt = $conn->prepare($sql_logs);
-        $like_department = "%".$faculty_department."%";
-        $stmt->bind_param("s", $like_department);
+        $stmt->bind_param("i", $faculty_dept_id);
         $stmt->execute();
         $res_logs = $stmt->get_result();
 
@@ -156,7 +159,7 @@ tr:hover { background:#f1f5f9; }
             while ($log = $res_logs->fetch_assoc()) {
                 echo "<tr>
                         <td>{$log['log_id']}</td>
-                        <td>{$log['full_name']}</td>
+                        <td>{$log['student_name']}</td>
                         <td>{$log['purpose']}</td>
                         <td>{$log['action']}</td>
                         <td>{$log['date_time']}</td>

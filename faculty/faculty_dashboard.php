@@ -40,7 +40,7 @@ $stmt->close();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Faculty Dashboard | E-STranscript Request System</title>
+<title>Faculty Dashboard | E-Scription Transcript System</title>
 <style>
   body { font-family: "Poppins", sans-serif; background: linear-gradient(to right, #d6f0e8, #b7d6f2); margin:0; color:#1e293b; }
   
@@ -97,16 +97,19 @@ $stmt->close();
 </div>
 
 <div class="container">
+  <!-- ✅ NAVIGATION BAR -->
+  <div class="nav">
+    <a href="faculty_dashboard.php" class="active">🏠 Home</a>
+    <a href="department_requests.php">📄 Department Requests</a>
+    <a href="transaction_log.php">🕒 Transaction Logs</a>
+    <a href="faculty_profile.php">👤 Profile</a>
+  </div>
+
+  <!-- Welcome Section -->
   <div class="welcome">
     <h2>Welcome, <?= htmlspecialchars($faculty_name); ?> 👋</h2>
     <p>Department: <b><?= htmlspecialchars($faculty_department); ?></b></p>
-    <p>Review student requests and see your department students below.</p>
-  </div>
-
-  <div class="nav">
-    <a href="faculty_dashboard.php" class="active">🏠 Home</a>
-    <a href="transaction_log.php">🕒 Transaction Logs</a>
-    <a href="faculty_profile.php">👤 Profile</a>
+    <p>Use the navigation above to manage transcript requests and view student details.</p>
   </div>
 
   <!-- Department Transcript Requests -->
