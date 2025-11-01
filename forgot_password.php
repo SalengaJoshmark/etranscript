@@ -11,6 +11,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($email) && !empty($role) && !isset($_POST['new_password'])) {
         if ($role == "student") {
             $sql = "SELECT full_name FROM student WHERE email='$email'";
+        } elseif ($role == "faculty") {
+            $sql = "SELECT full_name FROM faculty WHERE email='$email'";
         } else {
             $sql = "SELECT full_name FROM admin WHERE email='$email'";
         }
@@ -35,8 +37,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if ($new_pass === $confirm_pass) {
             $hashed_pass = password_hash($new_pass, PASSWORD_DEFAULT);
+
             if ($role == "student") {
                 $update = "UPDATE student SET password='$hashed_pass' WHERE email='$email'";
+            } elseif ($role == "faculty") {
+                $update = "UPDATE faculty SET password='$hashed_pass' WHERE email='$email'";
             } else {
                 $update = "UPDATE admin SET password='$hashed_pass' WHERE email='$email'";
             }
@@ -147,7 +152,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
     .error { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
 
-    /* 👁 Password input container fix */
     .password-container {
       position: relative;
       width: 100%;
@@ -195,6 +199,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <select name="role" required>
         <option value="">-- Select Role --</option>
         <option value="student" <?php if(!empty($_POST['role']) && $_POST['role']=='student') echo 'selected'; ?>>Student</option>
+        <option value="faculty" <?php if(!empty($_POST['role']) && $_POST['role']=='faculty') echo 'selected'; ?>>Faculty</option>
         <option value="admin" <?php if(!empty($_POST['role']) && $_POST['role']=='admin') echo 'selected'; ?>>Admin</option>
       </select>
 

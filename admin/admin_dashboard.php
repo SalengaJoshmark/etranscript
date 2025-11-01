@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("db_connect.php");
+include("../db_connect.php");
 
 // Redirect if not logged in as admin
 if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
@@ -26,7 +26,10 @@ $result = $stmt->get_result();
 if ($row = $result->fetch_assoc()) {
     $admin_name = $row['full_name'];
     if (!empty($row['profile_picture'])) {
-        $admin_pic = $row['profile_picture'];
+       $admin_pic = !empty($row['profile_picture'])
+    ? '../uploads/profile_pics/' . basename($row['profile_picture'])
+    : '../uploads/default_avatar.png';
+
     }
 }
 $stmt->close();
@@ -36,7 +39,7 @@ $stmt->close();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin Dashboard | E-Transcript Request System</title>
+<title>Admin Dashboard | E-Scription</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -110,23 +113,24 @@ $stmt->close();
     font-size: 20px;
   }
 
-  /* TABLE */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  th, td {
-    border-bottom: 1px solid #335b90ff;
-    padding: 10px;
-    text-align: center;
-  }
-  th {
-    background-color: #bbdcfdff;
-    color: #1e3a8a;
-  }
-  tr:hover { background-color: #eff6ff; }
+ table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white; /* table background is now white */
+}
+th, td {
+  border-bottom: 1px solid #335b90ff;
+  padding: 10px;
+  text-align: center;
+}
+th {
+  background-color: #bbdcfdff;
+  color: #1e3a8a;
+}
+tr:hover { background-color: #eff6ff; }
+
 
   /* STATUS COLORS */
   .status {
@@ -164,11 +168,11 @@ $stmt->close();
 <body>
 
 <div class="header">
-  <h1>📘 E-Transcript Admin Dashboard</h1>
+  <h1>📘 E-Scription Admin Dashboard</h1>
   <div class="right-section">
     <img src="<?= htmlspecialchars($admin_pic); ?>" alt="Admin" class="admin-pic">
     <div class="clock" id="clock"></div>
-    <a href="logout.php" class="logout">Logout</a>
+    <a href="../logout.php" class="logout">Logout</a>
   </div>
 </div>
 
@@ -181,7 +185,7 @@ $stmt->close();
   <div class="nav">
   <a href="admin_dashboard.php">🏠 Home</a>
   <a href="manage_request.php">📂 Manage Requests</a>
-  <a href="student_list.php">🎓 Students List</a>
+  <a href="user_list.php">👥 User Management</a>
   <a href="transaction_log.php">🕒 Transaction Logs</a>
   <a href="admin_profile.php">👤 Profile</a>
 </div>
@@ -216,7 +220,7 @@ $stmt->close();
                       <td>{$row['request_date']}</td>
                       <td><span class='status {$statusClass}'>" . htmlspecialchars($row['status']) . "</span></td>
                       <td>
-                        <a href='view_request.php?id={$row['request_id']}' class='btn view'>View</a>
+                        <a href='../view_request.php?id={$row['request_id']}' class='btn view'>View</a>
                       </td>
                     </tr>";
           }
@@ -227,34 +231,75 @@ $stmt->close();
     </table>
   </div>
 
-  <!-- Registered Students -->
-  <div class="section-card">
-    <h2>🎓 Registered Students</h2>
+ <!-- Registered Users (Students + Faculty) -->
+<div class="section-card">
+    <h2>👥 Student List</h2>
     <table>
       <tr>
-        <th>Student ID</th>
+        <th>ID</th>
         <th>Full Name</th>
         <th>Email</th>
+        <th>Course</th>
         <th>Registered Date</th>
       </tr>
       <?php
-      $sql_students = "SELECT student_id, full_name, email, created_at FROM student ORDER BY created_at DESC";
+      $sql_students = "SELECT student_id AS id, full_name, email, course, created_at
+                       FROM student
+                       ORDER BY created_at DESC";
       $res_students = mysqli_query($conn, $sql_students);
-      if (mysqli_num_rows($res_students) > 0) {
+
+      if ($res_students && mysqli_num_rows($res_students) > 0) {
           while ($student = mysqli_fetch_assoc($res_students)) {
+              $course = !empty($student['course']) ? htmlspecialchars($student['course']) : '-';
               echo "<tr>
-                      <td>{$student['student_id']}</td>
+                      <td>{$student['id']}</td>
                       <td>{$student['full_name']}</td>
                       <td>{$student['email']}</td>
+                      <td>{$course}</td>
                       <td>{$student['created_at']}</td>
                     </tr>";
           }
       } else {
-          echo "<tr><td colspan='4'>No students found.</td></tr>";
+          echo "<tr><td colspan='5'>No students found.</td></tr>";
       }
       ?>
     </table>
-  </div>
+</div>
+
+<div class="section-card">
+    <h2>👥 Faculty List</h2>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Full Name</th>
+        <th>Email</th>
+        <th>Department</th>
+        <th>Registered Date</th>
+      </tr>
+      <?php
+      $sql_faculty = "SELECT faculty_id AS id, full_name, email, department, created_at
+                      FROM faculty
+                      ORDER BY created_at DESC";
+      $res_faculty = mysqli_query($conn, $sql_faculty);
+
+      if ($res_faculty && mysqli_num_rows($res_faculty) > 0) {
+          while ($faculty = mysqli_fetch_assoc($res_faculty)) {
+              $dept = !empty($faculty['department']) ? htmlspecialchars($faculty['department']) : '-';
+              echo "<tr>
+                      <td>{$faculty['id']}</td>
+                      <td>{$faculty['full_name']}</td>
+                      <td>{$faculty['email']}</td>
+                      <td>{$dept}</td>
+                      <td>{$faculty['created_at']}</td>
+                    </tr>";
+          }
+      } else {
+          echo "<tr><td colspan='5'>No faculty found.</td></tr>";
+      }
+      ?>
+    </table>
+</div>
+
 
   <!-- Transaction Logs -->
   <div class="section-card">

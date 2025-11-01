@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("db_connect.php");
+include("../db_connect.php");
 
 // Redirect if not logged in as admin
 if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
@@ -146,15 +146,15 @@ $result = mysqli_query($conn, $sql);
 <body>
 
 <div class="navbar">
-  <div class="logo">E-Transcript System</div>
+  <div class="logo">E-Scription</div>
   <div class="links">
    <a href="admin_dashboard.php">🏠 Home</a>
   <a href="manage_request.php">📂 Manage Requests</a>
-  <a href="student_list.php">🎓 Students List</a>
+  <a href="user_list.php">👥 User Management</a>
   <a href="transaction_log.php">🕒 Transaction Logs</a>
   <a href="admin_profile.php">👤 Profile</a>
   </div>
-  <a href="logout.php" class="logout">Logout</a>
+  <a href="../logout.php" class="logout">Logout</a>
 </div>
 
 <div class="container">
@@ -198,12 +198,12 @@ $result = mysqli_query($conn, $sql);
                     <td>{$row['request_date']}</td>
                     <td style='color:$status_color;font-weight:bold;'>{$row['status']}</td>
                     <td>
-                    <a href='view_request.php?id={$row['request_id']}' class='btn view'>View</a>
+                    <a href='../view_request.php?id={$row['request_id']}' class='btn view'>View</a>
                     ";
 
                     if ($row['status'] == 'Pending') {
                         echo "
-                        <a href='view_request.php?id={$row['request_id']}' class='btn approve'>Approve</a>
+                        <a href='../view_request.php?id={$row['request_id']}' class='btn approve'>Approve</a>
                         <a href='manage_requests.php?action=reject&id={$row['request_id']}' class='btn reject' onclick='return confirm(\"Reject this request?\")'>Reject</a>
                         ";
                     } else {

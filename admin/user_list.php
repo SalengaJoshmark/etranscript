@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("db_connect.php");
+include("../db_connect.php");
 
 // Redirect if not logged in as admin
 if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
@@ -20,35 +20,45 @@ if ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Handle delete action
-if (isset($_GET['delete_id'])) {
+// Handle delete actions
+if (isset($_GET['delete_type']) && isset($_GET['delete_id'])) {
+    $type = $_GET['delete_type'];
     $delete_id = intval($_GET['delete_id']);
-    $stmt = $conn->prepare("DELETE FROM student WHERE student_id = ?");
+    $table = ($type === 'faculty') ? 'faculty' : 'student';
+    $stmt = $conn->prepare("DELETE FROM $table WHERE {$table}_id = ?");
     $stmt->bind_param("i", $delete_id);
     if ($stmt->execute()) {
-        $_SESSION['success_message'] = "Student deleted successfully.";
+        $_SESSION['success_message'] = ucfirst($type) . " deleted successfully.";
     } else {
-        $_SESSION['error_message'] = "Failed to delete student.";
+        $_SESSION['error_message'] = "Failed to delete " . $type . ".";
     }
-    header("Location: student_list.php");
+    header("Location: user_management.php");
     exit();
 }
 
-// Search query
+// Fetch students
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
-$query = "SELECT * FROM student WHERE full_name LIKE ? OR email LIKE ? ORDER BY created_at DESC";
-$stmt = $conn->prepare($query);
 $likeSearch = "%$search%";
-$stmt->bind_param("ss", $likeSearch, $likeSearch);
-$stmt->execute();
-$students = $stmt->get_result();
+
+$query_students = "SELECT * FROM student WHERE full_name LIKE ? OR email LIKE ? ORDER BY created_at DESC";
+$stmt_students = $conn->prepare($query_students);
+$stmt_students->bind_param("ss", $likeSearch, $likeSearch);
+$stmt_students->execute();
+$students = $stmt_students->get_result();
+
+// Fetch faculty
+$query_faculty = "SELECT * FROM faculty WHERE full_name LIKE ? OR email LIKE ? ORDER BY created_at DESC";
+$stmt_faculty = $conn->prepare($query_faculty);
+$stmt_faculty->bind_param("ss", $likeSearch, $likeSearch);
+$stmt_faculty->execute();
+$faculty = $stmt_faculty->get_result();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin | Student List</title>
+<title>Admin | User Management</title>
 <style>
   body {
     font-family: "Poppins", sans-serif;
@@ -90,6 +100,14 @@ $students = $stmt->get_result();
 
   h2 { color: #1e3a8a; margin-bottom: 20px; }
 
+  .section-title {
+    color: #1e3a8a;
+    border-left: 6px solid #1e40af;
+    padding-left: 10px;
+    font-size: 20px;
+    margin-top: 30px;
+  }
+
   .alert {
     padding: 10px;
     border-radius: 6px;
@@ -129,6 +147,7 @@ $students = $stmt->get_result();
   table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 15px;
   }
 
   th, td {
@@ -161,7 +180,6 @@ $students = $stmt->get_result();
   .btn-delete { background: #dc2626; }
   .btn-delete:hover { background: #b91c1c; }
 
-  /* Modal */
   .modal {
     display: none;
     position: fixed;
@@ -201,19 +219,19 @@ $students = $stmt->get_result();
 <body>
 
 <div class="navbar">
-  <div class="logo">E-Transcript System</div>
+  <div class="logo">E-Scription</div>
   <div class="links">
     <a href="admin_dashboard.php">🏠 Home</a>
     <a href="manage_request.php">📂 Manage Requests</a>
-    <a href="student_list.php">🎓 Students List</a>
+    <a href="user_list.php">👥 User Management</a>
     <a href="transaction_log.php">🕒 Transaction Logs</a>
     <a href="admin_profile.php">👤 Profile</a>
   </div>
-  <a href="logout.php" class="logout">Logout</a>
+  <a href="../logout.php" class="logout">Logout</a>
 </div>
 
 <div class="container">
-  <h2>Registered Students</h2>
+  <h2>User Management</h2>
 
   <?php
   if (isset($_SESSION['success_message'])) {
@@ -231,22 +249,25 @@ $students = $stmt->get_result();
     <button type="submit">Search</button>
   </form>
 
+  <!-- STUDENT SECTION -->
+  <h3 class="section-title">🎓 Student Accounts</h3>
   <table>
     <tr>
       <th>Profile</th>
       <th>Student ID</th>
-      <th>Student Number</th>
+      <th>Student No.</th>
       <th>Full Name</th>
       <th>Email</th>
       <th>Course</th>
-      <th>Date Registered</th>
+      <th>Registered Date</th>
       <th>Action</th>
     </tr>
     <?php
     if ($students->num_rows > 0) {
         while ($student = $students->fetch_assoc()) {
-            $pic = !empty($student['profile_picture']) ? $student['profile_picture'] : 'uploads/default_avatar.png';
-
+            $pic = !empty($student['profile_picture'])
+                ? '../uploads/profile_pics/' . basename($student['profile_picture'])
+                : '../uploads/default_avatar.png';
             echo "<tr>
                     <td><img src='$pic' class='profile-pic'></td>
                     <td>{$student['student_id']}</td>
@@ -256,8 +277,8 @@ $students = $stmt->get_result();
                     <td>{$student['course']}</td>
                     <td>{$student['created_at']}</td>
                     <td>
-                      <a href='#' class='btn btn-view' onclick='viewStudent(\"{$student['student_number']}\", \"{$student['full_name']}\", \"{$student['email']}\", \"{$student['course']}\", \"{$student['created_at']}\", \"$pic\")'>View</a>
-                      <a href='student_list.php?delete_id={$student['student_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this student?\")'>Delete</a>
+                      <a href='#' class='btn btn-view' onclick='viewUser(\"{$student['full_name']}\", \"{$student['email']}\", \"{$student['course']}\", \"{$student['created_at']}\", \"$pic\")'>View</a>
+                      <a href='user_management.php?delete_type=student&delete_id={$student['student_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this student?\")'>Delete</a>
                     </td>
                   </tr>";
         }
@@ -266,33 +287,68 @@ $students = $stmt->get_result();
     }
     ?>
   </table>
+
+  <!-- FACULTY SECTION -->
+  <h3 class="section-title">👨‍🏫 Faculty Accounts</h3>
+  <table>
+    <tr>
+      <th>Profile</th>
+      <th>Faculty ID</th>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Department</th>
+      <th>Registered Date</th>
+      <th>Action</th>
+    </tr>
+    <?php
+    if ($faculty->num_rows > 0) {
+        while ($f = $faculty->fetch_assoc()) {
+            $pic = !empty($f['profile_picture'])
+                ? '../uploads/profile_pics/' . basename($f['profile_picture'])
+                : '../uploads/default_avatar.png';
+            echo "<tr>
+                    <td><img src='$pic' class='profile-pic'></td>
+                    <td>{$f['faculty_id']}</td>
+                    <td>{$f['full_name']}</td>
+                    <td>{$f['email']}</td>
+                    <td>{$f['department']}</td>
+                    <td>{$f['created_at']}</td>
+                    <td>
+                      <a href='#' class='btn btn-view' onclick='viewUser(\"{$f['full_name']}\", \"{$f['email']}\", \"{$f['department']}\", \"{$f['created_at']}\", \"$pic\")'>View</a>
+                      <a href='user_management.php?delete_type=faculty&delete_id={$f['faculty_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this faculty member?\")'>Delete</a>
+                    </td>
+                  </tr>";
+        }
+    } else {
+        echo "<tr><td colspan='7'>No faculty members found.</td></tr>";
+    }
+    ?>
+  </table>
 </div>
 
-<!-- View Modal -->
-<div class="modal" id="studentModal">
+<!-- Modal -->
+<div class="modal" id="userModal">
   <div class="modal-content">
     <img id="modalPic" src="" alt="Profile Picture">
     <h3 id="modalName"></h3>
-    <p id="modalNumber"></p>
     <p id="modalEmail"></p>
-    <p id="modalCourse"></p>
+    <p id="modalInfo"></p>
     <p id="modalDate"></p>
     <button class="close" onclick="closeModal()">Close</button>
   </div>
 </div>
 
 <script>
-function viewStudent(number, name, email, course, date, pic) {
-  document.getElementById('modalNumber').textContent = "🆔 Student No: " + number;
+function viewUser(name, email, info, date, pic) {
   document.getElementById('modalName').textContent = name;
   document.getElementById('modalEmail').textContent = "📧 " + email;
-  document.getElementById('modalCourse').textContent = "🎓 " + course;
+  document.getElementById('modalInfo').textContent = "📘 " + info;
   document.getElementById('modalDate').textContent = "🗓 Registered: " + date;
   document.getElementById('modalPic').src = pic;
-  document.getElementById('studentModal').style.display = 'flex';
+  document.getElementById('userModal').style.display = 'flex';
 }
 function closeModal() {
-  document.getElementById('studentModal').style.display = 'none';
+  document.getElementById('userModal').style.display = 'none';
 }
 </script>
 

@@ -19,15 +19,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (mysqli_query($conn, $sql)) {
         // ✅ Set session message for the dashboard
         $_SESSION['success_message'] = "Your request has been submitted successfully! Status: Pending.";
-        header("Location: student_dashboard.php");
+        header("Location: student/student_dashboard.php");
         exit();
     } else {
         $_SESSION['error_message'] = "Error submitting request: " . mysqli_error($conn);
-        header("Location: new_request.php");
+        header("Location: student/new_request.php");
         exit();
     }
 } else {
-    header("Location: new_request.php");
+    header("Location: student/new_request.php");
     exit();
 }
 ?>

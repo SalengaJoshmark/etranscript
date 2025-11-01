@@ -12,12 +12,14 @@ $user_role = $_SESSION['user'];
 $email = $_SESSION['email'] ?? '';
 $logout_link = "logout.php";
 
-// ✅ Detect source for back button
+// ✅ Detect source for back button (for exit without changing UI)
 $source = $_GET['source'] ?? '';
 if ($user_role === 'admin') {
-    $back_link = ($source === 'manage') ? 'manage_request.php' : 'admin_dashboard.php';
+    $back_link = ($source === 'manage') ? 'manage_request.php' : 'admin/admin_dashboard.php';
+} elseif ($user_role === 'faculty') {
+    $back_link = 'faculty/faculty_dashboard.php';
 } else {
-    $back_link = 'student_dashboard.php';
+    $back_link = 'student/student_dashboard.php';
 }
 
 // Ensure request ID exists
@@ -159,10 +161,12 @@ $row = mysqli_fetch_assoc($result);
 
   <div style="margin-top: 30px;">
   <?php if ($user_role === 'admin'): ?>
-    <a href="manage_request.php" class="btn back" style="margin-right: 10px;">Back to Manage Requests</a>
-    <a href="admin_dashboard.php" class="btn back">Back to Dashboard</a>
+    <a href="admin/manage_request.php" class="btn back" style="margin-right: 10px;">Back to Manage Requests</a>
+    <a href="admin/admin_dashboard.php" class="btn back">Back to Dashboard</a>
+  <?php elseif ($user_role === 'faculty'): ?>
+    <a href="faculty/faculty_dashboard.php" class="btn back">Back to Dashboard</a>
   <?php else: ?>
-    <a href="student_dashboard.php" class="btn back">Back to Dashboard</a>
+    <a href="student/student_dashboard.php" class="btn back">Back to Dashboard</a>
   <?php endif; ?>
   </div>
 </div>

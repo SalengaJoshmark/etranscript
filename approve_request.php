@@ -11,7 +11,7 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
 
 // ✅ Ensure request ID is provided
 if (!isset($_GET['id'])) {
-    header("Location: admin_dashboard.php");
+    header("Location: admin/admin_dashboard.php");
     exit();
 }
 
@@ -34,7 +34,7 @@ $req_query = mysqli_query($conn, "
 $req = mysqli_fetch_assoc($req_query);
 
 if (!$req) {
-    echo "<script>alert('Request not found!'); window.location='admin_dashboard.php';</script>";
+    echo "<script>alert('Request not found!'); window.location='admin/admin_dashboard.php';</script>";
     exit();
 }
 
@@ -46,16 +46,18 @@ $update = "
     WHERE request_id='$request_id'
 ";
 if (!mysqli_query($conn, $update)) {
-    echo "<script>alert('❌ Failed to update request.'); window.location='admin_dashboard.php';</script>";
+    echo "<script>alert('❌ Failed to update request.'); window.location='admin/admin_dashboard.php';</script>";
     exit();
 }
 
 // ✅ Log the transaction
 $action = "Approved";
 $log_msg = "Request approved by Admin: $admin_name";
+$purpose = $req['purpose']; // ✅ Get purpose from the request
+
 mysqli_query($conn, "
-    INSERT INTO transaction_log (request_id, action, date_time, remarks)
-    VALUES ('$request_id', '$action', NOW(), '$log_msg')
+    INSERT INTO transaction_log (request_id, purpose, action, date_time, remarks)
+    VALUES ('$request_id', '$purpose', '$action', NOW(), '$log_msg')
 ");
 
 // ✅ Generate PDF automatically
@@ -109,6 +111,6 @@ $pdf->Output('F', $pdfFile);
 
 // ✅ Success message and redirect
 echo "<script>alert('✅ Request approved and PDF generated successfully!'); 
-      window.location='admin_dashboard.php';</script>";
+      window.location='admin/admin_dashboard.php';</script>";
 exit();
 ?>

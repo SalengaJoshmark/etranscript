@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("db_connect.php");
+include("../db_connect.php");
 
 if (!isset($_SESSION['user']) || $_SESSION['user'] != 'student') {
     header("Location: index.php");
@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle profile picture upload
     $profile_picture = $student['profile_picture']; // existing picture
     if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
-        $target_dir = "uploads/profile_pics/";
+        $target_dir = "../uploads/profile_pics/";
         if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
         $file_name = time() . "_" . basename($_FILES['profile_picture']['name']);
         $target_file = $target_dir . $file_name;
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (mysqli_query($conn, $update)) {
         $_SESSION['success_message'] = "Profile updated successfully!";
-        header("Location: student_profile.php");
+        header("Location: student/student_profile.php");
         exit();
     }
 }
@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <div class="navbar">
-  <div class="logo">E-Transcript System</div>
+  <div class="logo">E-Scription</div>
   <div class="links">
     <a href="student_dashboard.php">🏠 Home</a>
     <a href="new_request.php">📝 New Request</a>
@@ -156,10 +156,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="student_profile.php" style="background:#3b82f6;">👤 Profile</a>
   </div>
   <div class="right">
-    <a href="logout.php" class="logout">Logout</a>
+    <a href="../logout.php" class="logout">Logout</a>
   </div>
 </div>
 
+<style>
+  .logout {
+    background: #adc0ff; /* match dashboard style */
+    color: #1e40af;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: 0.3s;
+  }
+  .logout:hover {
+    background: #dbeafe;
+  }
+</style>
 <div class="container">
   <h2>👤 My Profile</h2>
 
@@ -168,7 +182,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <form method="POST" enctype="multipart/form-data">
-    <img src="<?= htmlspecialchars($student['profile_picture'] ?: 'uploads/default_avatar.png') ?>" alt="Profile Picture" class="profile-pic">
+   <?php
+$profile_img = $student['profile_picture'];
+
+// If DB has a valid path and file exists
+if (!empty($profile_img) && file_exists("../" . $profile_img)) {
+    $display_img = "../" . $profile_img;
+} else {
+    $display_img = "../uploads/profile_pics/default_avatar.png";
+}
+?>
+<img src="<?= htmlspecialchars($display_img) ?>" alt="Profile Picture" class="profile-pic">
 
     <label>Change Profile Picture</label>
     <input type="file" name="profile_picture" accept="image/*">

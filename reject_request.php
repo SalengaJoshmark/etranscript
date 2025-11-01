@@ -36,7 +36,7 @@ if (isset($_GET['id'])) {
                            VALUES ('$request_id', '$action', NOW(), '$remarks')";
             mysqli_query($conn, $insert_log);
 
-            echo "<script>alert('Request rejected successfully by $admin_name!'); window.location='admin_dashboard.php';</script>";
+            echo "<script>alert('Request rejected successfully by $admin_name!'); window.location='admin/admin_dashboard.php';</script>";
         } else {
             echo "Error: " . mysqli_error($conn);
         }
@@ -102,7 +102,7 @@ if (isset($_GET['id'])) {
     </html>
     <?php
 } else {
-    header("Location: admin_dashboard.php");
+    header("Location: admin/admin_dashboard.php");
     exit();
 }
 ?>

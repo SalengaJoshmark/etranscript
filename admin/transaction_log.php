@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("db_connect.php");
+include("../db_connect.php");
 
 // Redirect if not logged in as admin
 if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
@@ -11,16 +11,25 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
 // Get admin details
 $email = $_SESSION['email'];
 $admin_name = "Admin";
-$admin_pic = "default_avatar.png";
+$admin_pic = "../uploads/profile_pics/default_avatar.png"; // default full path
 
 $stmt = $conn->prepare("SELECT full_name, profile_picture FROM admin WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
+
 if ($row = $result->fetch_assoc()) {
     $admin_name = $row['full_name'];
+
+    // Determine correct image path
     if (!empty($row['profile_picture'])) {
-        $admin_pic = $row['profile_picture'];
+        if (file_exists("../" . $row['profile_picture'])) {
+            // ✅ if database stores "uploads/profile_pics/filename.png"
+            $admin_pic = "../" . $row['profile_picture'];
+        } elseif (file_exists("../uploads/profile_pics/" . $row['profile_picture'])) {
+            // ✅ if database stores only "filename.png"
+            $admin_pic = "../uploads/profile_pics/" . $row['profile_picture'];
+        }
     }
 }
 $stmt->close();
@@ -29,7 +38,7 @@ $stmt->close();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Transaction Logs | E-Transcript System</title>
+<title>Transaction Logs | E-Scription</title>
 <style>
   body {
     font-family: "Poppins", sans-serif;
@@ -147,7 +156,7 @@ $stmt->close();
   <div class="right-section">
     <span class="admin-name"><?= htmlspecialchars($admin_name); ?></span>
     <img src="<?= htmlspecialchars($admin_pic); ?>" alt="Admin" class="admin-pic">
-    <a href="logout.php" class="logout">Logout</a>
+    <a href="../logout.php" class="logout">Logout</a>
   </div>
 </div>
 
@@ -155,7 +164,7 @@ $stmt->close();
   <div class="nav">
     <a href="admin_dashboard.php">🏠 Home</a>
     <a href="manage_request.php">📂 Manage Requests</a>
-    <a href="student_list.php">🎓 Students List</a>
+   <a href="user_list.php">👥 User Management</a>
     <a href="transaction_log.php" class="active">🕒 Transaction Logs</a>
     <a href="admin_profile.php">👤 Profile</a>
   </div>

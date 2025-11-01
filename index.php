@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>E-Transcript Request System | Login</title>
+  <title>E-Scription | Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * {
@@ -136,19 +136,6 @@
       transform: translateY(-1px);
     }
 
-    .toggle-link {
-      margin-top: 16px;
-      color: #1e3a8a;
-      cursor: pointer;
-      font-size: 14px;
-      display: inline-block;
-      transition: 0.2s;
-    }
-
-    .toggle-link:hover {
-      text-decoration: underline;
-    }
-
     .forgot-password {
       margin-top: 12px;
     }
@@ -192,18 +179,16 @@
 
   <!-- Header -->
   <div class="header">
-    <h1>E-Transcript Request System</h1>
+    <h1>E-Scription Transcript Request System</h1>
     <span>Automated & Secure Academic Document Requests</span>
   </div>
 
   <!-- Login Box -->
   <div class="login-box">
-    <h2 id="login-title">Student Login</h2>
+    <h2>Login</h2>
 
-    <form method="POST" action="login.php" id="loginForm">
-      <input type="hidden" name="role" id="role" value="student">
-
-      <input type="text" name="email" placeholder="Email or Student Number" required>
+    <form method="POST" action="login.php">
+      <input type="text" name="email" placeholder="Email" required>
 
       <div class="password-container">
         <input type="password" name="password" id="password" placeholder="Password" required>
@@ -226,8 +211,6 @@
       <button type="submit">Login</button>
     </form>
 
-    <div class="toggle-link" id="switchLink" onclick="toggleLogin()">Login as Admin</div>
-
     <div class="forgot-password">
       <a href="forgot_password.php">Forgot Password?</a>
     </div>
@@ -243,22 +226,6 @@
 
   <!-- JS -->
   <script>
-    function toggleLogin() {
-      const roleInput = document.getElementById("role");
-      const title = document.getElementById("login-title");
-      const switchLink = document.getElementById("switchLink");
-
-      if (roleInput.value === "student") {
-        roleInput.value = "admin";
-        title.textContent = "Admin Login";
-        switchLink.textContent = "Login as Student";
-      } else {
-        roleInput.value = "student";
-        title.textContent = "Student Login";
-        switchLink.textContent = "Login as Admin";
-      }
-    }
-
     function togglePassword() {
       const passwordField = document.getElementById("password");
       const eyeOpen = document.getElementById("eye-open");

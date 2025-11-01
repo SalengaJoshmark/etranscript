@@ -1,11 +1,21 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+include("db_connect.php");
+
+// ✅ Fetch departments
+$departments = [];
+$result = $conn->query("SELECT department_id, department_name FROM department ORDER BY department_name ASC");
+while ($row = $result->fetch_assoc()) {
+  $departments[] = $row;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>E-Transcript Request System | Create Account</title>
+  <title>E-Scription | Create Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- ✅ Font Awesome for Eye Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <style>
@@ -32,14 +42,12 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      box-sizing: border-box;
     }
 
     .header h1 {
       font-size: 22px;
       margin: 0;
     }
-
     .header span {
       font-size: 14px;
       opacity: 0.9;
@@ -48,12 +56,12 @@
     .register-box {
       background: #ffffff;
       padding: 45px 50px;
-      border-radius: 14px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+      width: 420px;
       text-align: center;
+      margin-top: 70px;
       animation: fadeIn 0.5s ease-in-out;
-      margin-top: 60px;
     }
 
     @keyframes fadeIn {
@@ -63,48 +71,54 @@
 
     h2 {
       color: #1e3a8a;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       font-size: 22px;
     }
 
-    input[type="text"], input[type="email"], input[type="password"], select {
+    label {
+      text-align: left;
+      display: block;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    input, select {
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #d1d5db;
+      padding: 10px 12px;
+      margin-top: 5px;
+      border: 1px solid #cbd5e1;
       border-radius: 6px;
       font-size: 14px;
       box-sizing: border-box;
+      outline: none;
+      transition: 0.2s;
     }
 
-    input[type="file"] {
-      margin-top: 10px;
-      font-size: 14px;
-      width: 100%;
+    input:focus, select:focus {
+      border-color: #1e40af;
+      box-shadow: 0 0 0 2px rgba(30,64,175,0.2);
     }
 
-    /* --- Password Field Styling --- */
     .password-container {
       position: relative;
-      width: 100%;
-      margin-bottom: 10px;
+      margin-top: 10px;
     }
 
     .password-container input {
-      width: 100%;
-      padding-right: 40px; /* space for eye icon */
+      padding-right: 40px;
     }
 
     .toggle-password {
       position: absolute;
-      top: 50%;
       right: 12px;
+      top: 50%;
       transform: translateY(-50%);
       cursor: pointer;
       color: #6b7280;
       font-size: 18px;
-      transition: color 0.2s ease;
-      user-select: none;
+      transition: color 0.2s;
     }
 
     .toggle-password:hover {
@@ -121,7 +135,8 @@
       font-weight: 600;
       cursor: pointer;
       font-size: 15px;
-      transition: 0.3s;
+      margin-top: 18px;
+      transition: all 0.3s;
     }
 
     button:hover {
@@ -130,7 +145,7 @@
     }
 
     .login-link {
-      margin-top: 18px;
+      margin-top: 15px;
       color: #1e3a8a;
       font-size: 14px;
     }
@@ -165,33 +180,51 @@
     <h2>Create Account</h2>
 
     <form method="POST" action="register_process.php" enctype="multipart/form-data">
-      <!-- Role -->
       <select name="role" required onchange="toggleRoleFields(this.value)">
         <option value="" disabled selected>Select Account Type</option>
         <option value="student">Student</option>
+        <option value="faculty">Faculty</option>
         <option value="admin">Admin</option>
       </select>
 
-      <!-- Shared Fields -->
       <input type="text" name="full_name" placeholder="Full Name" required>
       <input type="email" name="email" placeholder="Email Address" required>
 
-      <!-- ✅ Admin Only Fields -->
+      <!-- Admin Only -->
       <div id="adminFields" style="display:none;">
         <input type="text" name="username" placeholder="Admin Username">
       </div>
 
-      <!-- ✅ Student Only Fields -->
-      <div id="studentFields">
-        <input type="text" name="course" placeholder="Course (e.g., BSIT)">
-        <input type="text" name="student_number" placeholder="Student Number">
+      <!-- Student Only -->
+      <div id="studentFields" style="display:none;">
+        <label>Department:</label>
+        <select name="department" id="student_department" onchange="loadCourses(this.value)">
+          <option value="" disabled selected>Select Department</option>
+          <?php foreach ($departments as $dept): ?>
+            <option value="<?= $dept['department_id']; ?>"><?= htmlspecialchars($dept['department_name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+
+        <label>Course:</label>
+        <select name="course" id="courseDropdown">
+          <option value="" disabled selected>Select Course</option>
+        </select>
       </div>
 
-      <!-- Profile Picture -->
-      <label style="display:block; text-align:left; font-size:13px; margin-top:10px;">Upload Profile Picture:</label>
+      <!-- Faculty Only -->
+      <div id="facultyFields" style="display:none;">
+        <label>Department:</label>
+        <select name="department" id="faculty_department">
+          <option value="" disabled selected>Select Department</option>
+          <?php foreach ($departments as $dept): ?>
+            <option value="<?= $dept['department_id']; ?>"><?= htmlspecialchars($dept['department_name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <label>Upload Profile Picture:</label>
       <input type="file" name="profile_picture" accept="image/*">
 
-      <!-- Password Fields -->
       <div class="password-container">
         <input type="password" name="password" id="password" placeholder="Password" required>
         <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('password', this)"></i>
@@ -215,29 +248,54 @@
   </footer>
 
   <script>
+    // ✅ Show/Hide password
     function togglePassword(id, icon) {
       const field = document.getElementById(id);
-      const isVisible = field.type === "text";
-      field.type = isVisible ? "password" : "text";
+      field.type = field.type === "password" ? "text" : "password";
       icon.classList.toggle("fa-eye");
       icon.classList.toggle("fa-eye-slash");
     }
 
-    // ✅ Toggle visibility of fields depending on selected role
+    // ✅ Role visibility
     function toggleRoleFields(role) {
-      const studentFields = document.getElementById("studentFields");
-      const adminFields = document.getElementById("adminFields");
+      const student = document.getElementById("studentFields");
+      const faculty = document.getElementById("facultyFields");
+      const admin = document.getElementById("adminFields");
+      student.style.display = faculty.style.display = admin.style.display = "none";
+
+      document.querySelectorAll("#studentFields select, #facultyFields select, #adminFields input").forEach(el => el.required = false);
 
       if (role === "student") {
-        studentFields.style.display = "block";
-        adminFields.style.display = "none";
+        student.style.display = "block";
+        document.getElementById("student_department").required = true;
+        document.getElementById("courseDropdown").required = true;
+      } else if (role === "faculty") {
+        faculty.style.display = "block";
+        document.getElementById("faculty_department").required = true;
       } else if (role === "admin") {
-        studentFields.style.display = "none";
-        adminFields.style.display = "block";
-      } else {
-        studentFields.style.display = "none";
-        adminFields.style.display = "none";
+        admin.style.display = "block";
+        admin.querySelector("input").required = true;
       }
+    }
+
+    // ✅ Dynamic course loading
+    function loadCourses(deptId) {
+      const courseDropdown = document.getElementById("courseDropdown");
+      courseDropdown.innerHTML = "<option>Loading...</option>";
+      fetch(`load_courses.php?department_id=${deptId}`)
+        .then(res => res.json())
+        .then(data => {
+          courseDropdown.innerHTML = '<option value="" disabled selected>Select Course</option>';
+          data.forEach(course => {
+            const opt = document.createElement("option");
+            opt.value = course.course_id;
+            opt.textContent = course.course_name;
+            courseDropdown.appendChild(opt);
+          });
+        })
+        .catch(() => {
+          courseDropdown.innerHTML = "<option>Error loading courses</option>";
+        });
     }
   </script>
 

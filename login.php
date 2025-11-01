@@ -1,76 +1,99 @@
 <?php
 session_start();
-include("db_connect.php");
+
+// ✅ Dynamically locate db_connect.php (works in root or subfolder)
+if (file_exists("db_connect.php")) {
+    include("db_connect.php");
+} elseif (file_exists("../db_connect.php")) {
+    include("../db_connect.php");
+} else {
+    die("❌ Database connection file not found.");
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
-    $role = $_POST['role'];
 
-    if (empty($email) || empty($password) || empty($role)) {
+    if (empty($email) || empty($password)) {
         echo "<script>alert('Please fill in all fields.'); window.history.back();</script>";
         exit;
     }
 
-    // Choose table based on role
-    $table = ($role === "admin") ? "admin" : "student";
+    $login_success = false;
+    $user_role = "";
+    $user_data = [];
 
-    // Prepare secure query
-    $stmt = $conn->prepare("SELECT full_name, email, password FROM $table WHERE email = ?");
+    // 🔍 Check ADMIN table
+    $stmt = $conn->prepare("SELECT full_name, email, password FROM admin WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
-    $result = $stmt->get_result();
+    $admin_result = $stmt->get_result();
 
-    if ($result->num_rows === 1) {
-        $row = $result->fetch_assoc();
+    if ($admin_result->num_rows === 1) {
+        $row = $admin_result->fetch_assoc();
         $stored_hash = $row['password'];
-        $full_name = $row['full_name'];
-        $login_success = false;
 
-        // ✅ Case 1: password_hash() (modern)
-        if (password_verify($password, $stored_hash)) {
+        if (password_verify($password, $stored_hash) || md5($password) === $stored_hash) {
             $login_success = true;
-
-            // Rehash if outdated
-            if (password_needs_rehash($stored_hash, PASSWORD_DEFAULT)) {
-                $new_hash = password_hash($password, PASSWORD_DEFAULT);
-                $update_stmt = $conn->prepare("UPDATE $table SET password = ? WHERE email = ?");
-                $update_stmt->bind_param("ss", $new_hash, $email);
-                $update_stmt->execute();
-            }
-
-        // ✅ Case 2: MD5 legacy
-        } elseif (md5($password) === $stored_hash) {
-            $login_success = true;
-
-            // Upgrade MD5 → password_hash()
-            $new_hash = password_hash($password, PASSWORD_DEFAULT);
-            $update_stmt = $conn->prepare("UPDATE $table SET password = ? WHERE email = ?");
-            $update_stmt->bind_param("ss", $new_hash, $email);
-            $update_stmt->execute();
+            $user_role = "admin";
+            $user_data = $row;
         }
+    }
 
-        // ✅ Login success — set session
-        if ($login_success) {
-            if ($role === "student") {
-                $_SESSION['user'] = 'student';
-                $_SESSION['email'] = $row['email'];
-                $_SESSION['student_name'] = $full_name;
-                header("Location: student_dashboard.php");
-            } else {
-                $_SESSION['user'] = 'admin';
-                $_SESSION['email'] = $row['email'];
-                $_SESSION['admin_name'] = $full_name;
-                header("Location: admin_dashboard.php");
+    // 🔍 If not found in admin, check STUDENT table
+    if (!$login_success) {
+        $stmt = $conn->prepare("SELECT full_name, email, password FROM student WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $student_result = $stmt->get_result();
+
+        if ($student_result->num_rows === 1) {
+            $row = $student_result->fetch_assoc();
+            $stored_hash = $row['password'];
+
+            if (password_verify($password, $stored_hash) || md5($password) === $stored_hash) {
+                $login_success = true;
+                $user_role = "student";
+                $user_data = $row;
             }
-            exit;
-        } else {
-            echo "<script>alert('❌ Incorrect password. Please try again.'); window.history.back();</script>";
-            exit;
         }
+    }
 
+    // 🔍 If not found in admin or student, check FACULTY table
+    if (!$login_success) {
+        $stmt = $conn->prepare("SELECT full_name, email, password FROM faculty WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $faculty_result = $stmt->get_result();
+
+        if ($faculty_result->num_rows === 1) {
+            $row = $faculty_result->fetch_assoc();
+            $stored_hash = $row['password'];
+
+            if (password_verify($password, $stored_hash) || md5($password) === $stored_hash) {
+                $login_success = true;
+                $user_role = "faculty";
+                $user_data = $row;
+            }
+        }
+    }
+
+    // ✅ If login successful
+    if ($login_success) {
+        $_SESSION['email'] = $user_data['email'];
+        $_SESSION['full_name'] = $user_data['full_name'];
+        $_SESSION['user'] = $user_role;
+
+        if ($user_role === "admin") {
+            header("Location: admin/admin_dashboard.php");
+        } elseif ($user_role === "student") {
+            header("Location: student/student_dashboard.php");
+        } elseif ($user_role === "faculty") {
+            header("Location: faculty/faculty_dashboard.php");
+        }
+        exit;
     } else {
-        echo "<script>alert('❌ No account found with that email.'); window.history.back();</script>";
+        echo "<script>alert('❌ Invalid email or password.'); window.history.back();</script>";
         exit;
     }
 
@@ -78,6 +101,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->close();
 } else {
     header("Location: index.php");
-    exit;
+    exit();
 }
 ?>
