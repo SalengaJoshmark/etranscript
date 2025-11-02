@@ -12,9 +12,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $purpose = ($_POST['purpose'] == "Other") ? $_POST['custom_purpose'] : $_POST['purpose'];
     $delivery_option = $_POST['delivery_option'];
     $remarks = !empty($_POST['remarks']) ? $_POST['remarks'] : NULL;
+    $date_needed = !empty($_POST['date_needed']) ? $_POST['date_needed'] : NULL; // ✅ added line
 
-    $sql = "INSERT INTO request (student_id, purpose, delivery_option, remarks, request_date, status)
-        VALUES ('$student_id', '$purpose', '$delivery_option', '$remarks', NOW(), 'Pending')";
+    // ✅ include date_needed in insert
+    $sql = "INSERT INTO request (student_id, purpose, delivery_option, remarks, date_needed, request_date, status)
+            VALUES ('$student_id', '$purpose', '$delivery_option', " . 
+            ($remarks ? "'$remarks'" : "NULL") . ", " . 
+            ($date_needed ? "'$date_needed'" : "NULL") . ", NOW(), 'Pending')";
 
     if (mysqli_query($conn, $sql)) {
         // ✅ Set session message for the dashboard

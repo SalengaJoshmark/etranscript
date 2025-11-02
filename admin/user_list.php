@@ -20,23 +20,94 @@ if ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Handle delete actions
+// ----------------------------
+// Handle Approve / Reject Actions
+// ----------------------------
+if (isset($_GET['action']) && isset($_GET['type']) && isset($_GET['id'])) {
+    $action = $_GET['action']; // approve or reject
+    $type = $_GET['type']; // student or faculty
+    $id = intval($_GET['id']);
+
+    $table = ($type === 'faculty') ? 'faculty' : 'student';
+    $id_col = ($type === 'faculty') ? 'faculty_id' : 'student_id';
+    $newStatus = ($action === 'approve') ? 'Approved' : 'Rejected';
+
+    if ($action === 'reject') {
+        // 🧹 Get profile picture path before deleting
+        $pic_query = $conn->prepare("SELECT profile_picture FROM $table WHERE $id_col = ?");
+        $pic_query->bind_param("i", $id);
+        $pic_query->execute();
+        $pic_result = $pic_query->get_result();
+        $pic = ($pic_result->num_rows > 0) ? $pic_result->fetch_assoc()['profile_picture'] : '';
+        $pic_query->close();
+
+        // ❌ Delete record
+        $delete_stmt = $conn->prepare("DELETE FROM $table WHERE $id_col = ?");
+        $delete_stmt->bind_param("i", $id);
+        if ($delete_stmt->execute()) {
+            if (!empty($pic) && file_exists("../" . $pic) && strpos($pic, "default_avatar.png") === false) {
+                unlink("../" . $pic);
+            }
+            mysqli_query($conn, "ALTER TABLE $table AUTO_INCREMENT = 1");
+            $_SESSION['success_message'] = ucfirst($type) . " registration rejected and removed. Profile picture deleted. ID counter adjusted.";
+        } else {
+            $_SESSION['error_message'] = "Failed to reject and remove " . $type . ".";
+        }
+        $delete_stmt->close();
+    } else {
+        // ✅ Approve user
+        $stmt = $conn->prepare("UPDATE $table SET status = ? WHERE $id_col = ?");
+        $stmt->bind_param("si", $newStatus, $id);
+        if ($stmt->execute()) {
+            $_SESSION['success_message'] = ucfirst($type) . " has been approved.";
+        } else {
+            $_SESSION['error_message'] = "Failed to approve " . $type . ".";
+        }
+        $stmt->close();
+    }
+
+    header("Location: user_list.php");
+    exit();
+}
+
+
+// ----------------------------
+// Handle Delete Actions
+// ----------------------------
 if (isset($_GET['delete_type']) && isset($_GET['delete_id'])) {
     $type = $_GET['delete_type'];
     $delete_id = intval($_GET['delete_id']);
     $table = ($type === 'faculty') ? 'faculty' : 'student';
-    $stmt = $conn->prepare("DELETE FROM $table WHERE {$table}_id = ?");
+    $id_col = ($type === 'faculty') ? 'faculty_id' : 'student_id';
+
+    // 🧹 Get profile picture path before deleting
+    $pic_query = $conn->prepare("SELECT profile_picture FROM $table WHERE $id_col = ?");
+    $pic_query->bind_param("i", $delete_id);
+    $pic_query->execute();
+    $pic_result = $pic_query->get_result();
+    $pic = ($pic_result->num_rows > 0) ? $pic_result->fetch_assoc()['profile_picture'] : '';
+    $pic_query->close();
+
+    // 🗑 Delete record
+    $stmt = $conn->prepare("DELETE FROM $table WHERE $id_col = ?");
     $stmt->bind_param("i", $delete_id);
     if ($stmt->execute()) {
-        $_SESSION['success_message'] = ucfirst($type) . " deleted successfully.";
+        if (!empty($pic) && file_exists("../" . $pic) && strpos($pic, "default_avatar.png") === false) {
+            unlink("../" . $pic);
+        }
+        mysqli_query($conn, "ALTER TABLE $table AUTO_INCREMENT = 1");
+        $_SESSION['success_message'] = ucfirst($type) . " deleted successfully and photo removed.";
     } else {
         $_SESSION['error_message'] = "Failed to delete " . $type . ".";
     }
-    header("Location: user_management.php");
+
+    header("Location: user_list.php");
     exit();
 }
 
-// Fetch students
+// ----------------------------
+// Fetch Students
+// ----------------------------
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 $likeSearch = "%$search%";
 
@@ -46,13 +117,16 @@ $stmt_students->bind_param("ss", $likeSearch, $likeSearch);
 $stmt_students->execute();
 $students = $stmt_students->get_result();
 
-// Fetch faculty
+// ----------------------------
+// Fetch Faculty
+// ----------------------------
 $query_faculty = "SELECT * FROM faculty WHERE full_name LIKE ? OR email LIKE ? ORDER BY created_at DESC";
 $stmt_faculty = $conn->prepare($query_faculty);
 $stmt_faculty->bind_param("ss", $likeSearch, $likeSearch);
 $stmt_faculty->execute();
 $faculty = $stmt_faculty->get_result();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -141,7 +215,6 @@ $faculty = $stmt_faculty->get_result();
     cursor: pointer;
     transition: 0.3s;
   }
-
   .search-bar button:hover { background: #1d4ed8; }
 
   table {
@@ -166,19 +239,45 @@ $faculty = $stmt_faculty->get_result();
     object-fit: cover;
   }
 
+  /* ✨ Improved Button Design */
   .btn {
-    padding: 5px 10px;
-    border-radius: 5px;
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 8px;
     text-decoration: none;
     font-size: 14px;
+    font-weight: 600;
     color: white;
-    margin: 0 3px;
+    margin: 3px;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   }
 
-  .btn-view { background: #2563eb; }
-  .btn-view:hover { background: #1d4ed8; }
-  .btn-delete { background: #dc2626; }
-  .btn-delete:hover { background: #b91c1c; }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+
+  .btn-view {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+  }
+  .btn-view:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  }
+
+  .btn-approve {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+  }
+  .btn-approve:hover {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+  }
+
+  .btn-delete {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+  }
+  .btn-delete:hover {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+  }
 
   .modal {
     display: none;
@@ -260,6 +359,7 @@ $faculty = $stmt_faculty->get_result();
       <th>Full Name</th>
       <th>Email</th>
       <th>Course</th>
+      <th>Status</th>
       <th>Registered Date</th>
       <th>Action</th>
     </tr>
@@ -276,15 +376,23 @@ $faculty = $stmt_faculty->get_result();
                     <td>{$student['full_name']}</td>
                     <td>{$student['email']}</td>
                     <td>{$student['course']}</td>
+                    <td><span style='color:" . 
+                      ($student['status']=='Approved' ? "#16a34a" : 
+                      ($student['status']=='Rejected' ? "#dc2626" : "#ca8a04")) . 
+                      "; font-weight:600;'>" . htmlspecialchars($student['status']) . "</span></td>
                     <td>{$student['created_at']}</td>
-                    <td>
-                      <a href='#' class='btn btn-view' onclick='viewUser(\"{$student['full_name']}\", \"{$student['email']}\", \"{$student['course']}\", \"{$student['created_at']}\", \"$pic\")'>View</a>
-                      <a href='user_management.php?delete_type=student&delete_id={$student['student_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this student?\")'>Delete</a>
-                    </td>
+                    <td>";
+            if ($student['status'] === 'Pending') {
+                echo "<a href='user_list.php?action=approve&type=student&id={$student['student_id']}' class='btn btn-approve'>✅ Approve</a>
+                      <a href='user_list.php?action=reject&type=student&id={$student['student_id']}' class='btn btn-delete'>❌ Reject</a>";
+            }
+            echo "<a href='#' class='btn btn-view' onclick='viewUser(\"{$student['full_name']}\", \"{$student['email']}\", \"{$student['course']}\", \"{$student['created_at']}\", \"$pic\")'>🔍 View</a>
+                  <a href='user_list.php?delete_type=student&delete_id={$student['student_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this student?\")'>🗑 Delete</a>
+                  </td>
                   </tr>";
         }
     } else {
-        echo "<tr><td colspan='8'>No students found.</td></tr>";
+        echo "<tr><td colspan='9'>No students found.</td></tr>";
     }
     ?>
   </table>
@@ -298,6 +406,7 @@ $faculty = $stmt_faculty->get_result();
       <th>Full Name</th>
       <th>Email</th>
       <th>Department</th>
+      <th>Status</th>
       <th>Registered Date</th>
       <th>Action</th>
     </tr>
@@ -313,15 +422,23 @@ $faculty = $stmt_faculty->get_result();
                     <td>{$f['full_name']}</td>
                     <td>{$f['email']}</td>
                     <td>{$f['department']}</td>
+                    <td><span style='color:" .
+                      ($f['status']=='Approved' ? "#16a34a" :
+                      ($f['status']=='Rejected' ? "#dc2626" : "#ca8a04")) .
+                      "; font-weight:600;'>" . htmlspecialchars($f['status']) . "</span></td>
                     <td>{$f['created_at']}</td>
-                    <td>
-                      <a href='#' class='btn btn-view' onclick='viewUser(\"{$f['full_name']}\", \"{$f['email']}\", \"{$f['department']}\", \"{$f['created_at']}\", \"$pic\")'>View</a>
-                      <a href='user_management.php?delete_type=faculty&delete_id={$f['faculty_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this faculty member?\")'>Delete</a>
-                    </td>
+                    <td>";
+            if ($f['status'] === 'Pending') {
+                echo "<a href='user_list.php?action=approve&type=faculty&id={$f['faculty_id']}' class='btn btn-approve'>✅ Approve</a>
+                      <a href='user_list.php?action=reject&type=faculty&id={$f['faculty_id']}' class='btn btn-delete'>❌ Reject</a>";
+            }
+            echo "<a href='#' class='btn btn-view' onclick='viewUser(\"{$f['full_name']}\", \"{$f['email']}\", \"{$f['department']}\", \"{$f['created_at']}\", \"$pic\")'>🔍 View</a>
+                  <a href='user_list.php?delete_type=faculty&delete_id={$f['faculty_id']}' class='btn btn-delete' onclick='return confirm(\"Delete this faculty member?\")'>🗑 Delete</a>
+                  </td>
                   </tr>";
         }
     } else {
-        echo "<tr><td colspan='7'>No faculty members found.</td></tr>";
+        echo "<tr><td colspan='8'>No faculty members found.</td></tr>";
     }
     ?>
   </table>

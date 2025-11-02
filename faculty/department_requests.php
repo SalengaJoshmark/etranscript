@@ -74,6 +74,11 @@ $stmt->close();
   .btn.view:hover { background:#1d4ed8; }
   .btn.message { background:#f59e0b; }
   .btn.message:hover { background:#d97706; }
+  .btn.disabled {
+    background:#94a3b8;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
 
   /* Status */
   .status { font-weight:600; padding:6px 10px; border-radius:6px; display:inline-block; }
@@ -134,11 +139,18 @@ $stmt->close();
                       <td>" . htmlspecialchars($r['purpose']) . "</td>
                       <td>{$r['request_date']}</td>
                       <td><span class='status {$statusClass}'>" . htmlspecialchars($r['status']) . "</span></td>
-                      <td>
-                        <a href='../view_request.php?id={$r['request_id']}' class='btn view'>View Details</a>
-                        <a href='message_admin.php?request_id={$r['request_id']}' class='btn message'>Notify Admin: Checked</a>
-                      </td>
-                    </tr>";
+                      <td>";
+              
+              echo "<a href='../view_request.php?id={$r['request_id']}' class='btn view'>View Details</a>";
+
+              // ✅ Disable "Notify Admin" if already checked
+              if (strtolower($r['status']) === 'checked') {
+                  echo "<button class='btn message disabled'>✔ Already Checked</button>";
+              } else {
+                  echo "<a href='message_admin.php?request_id={$r['request_id']}' class='btn message'>Notify Admin: Checked</a>";
+              }
+
+              echo "</td></tr>";
           }
       } else {
           echo "<tr><td colspan='6'>No transcript requests found in your department.</td></tr>";

@@ -88,9 +88,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // ✅ Insert based on role
+    // ✅ Insert based on role with Pending status
     if ($role === "student") {
-        // Fetch both course name and department ID from course table
         $courseQuery = mysqli_query($conn, "SELECT course_name, department_id FROM course WHERE course_id = '$course_id'");
         $courseData = mysqli_fetch_assoc($courseQuery);
 
@@ -102,32 +101,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $course_name = mysqli_real_escape_string($conn, $courseData['course_name']);
         $department_id = $courseData['department_id'];
 
-        // ✅ insert course name for display + ID for relations
-        $insertQuery = "INSERT INTO student (full_name, course_id, course, department_id, student_number, email, password, profile_picture)
-                        VALUES ('$full_name', '$course_id', '$course_name', '$department_id', '$student_number', '$email', '$hashed_password', '$profile_picture')";
+        $insertQuery = "INSERT INTO student (full_name, course_id, course, department_id, student_number, email, password, profile_picture, status)
+                        VALUES ('$full_name', '$course_id', '$course_name', '$department_id', '$student_number', '$email', '$hashed_password', '$profile_picture', 'Pending')";
 
     } elseif ($role === "faculty") {
-    // ✅ Fetch department name from department table
-    $deptQuery = mysqli_query($conn, "SELECT department_name FROM department WHERE department_id = '$department_id'");
-    $deptData = mysqli_fetch_assoc($deptQuery);
+        $deptQuery = mysqli_query($conn, "SELECT department_name FROM department WHERE department_id = '$department_id'");
+        $deptData = mysqli_fetch_assoc($deptQuery);
 
-    if (!$deptData) {
-        echo "<script>alert('❌ Invalid department selection.'); window.history.back();</script>";
-        exit();
-    }
+        if (!$deptData) {
+            echo "<script>alert('❌ Invalid department selection.'); window.history.back();</script>";
+            exit();
+        }
 
-    $department_name = mysqli_real_escape_string($conn, $deptData['department_name']);
+        $department_name = mysqli_real_escape_string($conn, $deptData['department_name']);
 
-    // ✅ Save both ID and readable department name if your table has a `department` column
-    if (mysqli_query($conn, "DESCRIBE faculty department")) {
-        $insertQuery = "INSERT INTO faculty (full_name, department_id, department, email, password, profile_picture)
-                        VALUES ('$full_name', '$department_id', '$department_name', '$email', '$hashed_password', '$profile_picture')";
-    } else {
-        // Fallback if only department_id exists
-        $insertQuery = "INSERT INTO faculty (full_name, department_id, email, password, profile_picture)
-                        VALUES ('$full_name', '$department_id', '$email', '$hashed_password', '$profile_picture')";
-    }
-
+        $insertQuery = "INSERT INTO faculty (full_name, department_id, department, email, password, profile_picture, status)
+                        VALUES ('$full_name', '$department_id', '$department_name', '$email', '$hashed_password', '$profile_picture', 'Pending')";
     } else {
         $insertQuery = "INSERT INTO admin (username, full_name, email, password, profile_picture)
                         VALUES ('$username', '$full_name', '$email', '$hashed_password', '$profile_picture')";
@@ -135,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // ✅ Execute insert
     if (mysqli_query($conn, $insertQuery)) {
-        echo "<script>alert('✅ $role account created successfully! You can now log in.'); window.location.href='index.php';</script>";
+        echo "<script>alert('✅ Registration successful! Your account is pending admin approval.'); window.location.href='index.php';</script>";
     } else {
         echo "<script>alert('❌ Something went wrong: " . mysqli_error($conn) . "'); window.history.back();</script>";
     }

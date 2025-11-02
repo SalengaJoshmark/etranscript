@@ -23,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $user_role = "";
     $user_data = [];
 
-    // 🔍 Check ADMIN table
+    // 🔍 Check ADMIN table (admins have no status restriction)
     $stmt = $conn->prepare("SELECT full_name, email, password FROM admin WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -40,9 +40,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // 🔍 If not found in admin, check STUDENT table
+    // 🔍 Check STUDENT table
     if (!$login_success) {
-        $stmt = $conn->prepare("SELECT full_name, email, password FROM student WHERE email = ?");
+        $stmt = $conn->prepare("SELECT full_name, email, password, status FROM student WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $student_result = $stmt->get_result();
@@ -52,6 +52,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stored_hash = $row['password'];
 
             if (password_verify($password, $stored_hash) || md5($password) === $stored_hash) {
+
+                // 🚫 Prevent login if status is Pending or Rejected
+                if (isset($row['status']) && in_array($row['status'], ['Pending', 'Rejected'])) {
+                    echo "<script>alert('⚠️ Your student account is {$row['status']}. Please wait for admin approval.'); window.location='index.php';</script>";
+                    exit();
+                }
+
                 $login_success = true;
                 $user_role = "student";
                 $user_data = $row;
@@ -59,9 +66,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // 🔍 If not found in admin or student, check FACULTY table
+    // 🔍 Check FACULTY table
     if (!$login_success) {
-        $stmt = $conn->prepare("SELECT full_name, email, password FROM faculty WHERE email = ?");
+        $stmt = $conn->prepare("SELECT full_name, email, password, status FROM faculty WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $faculty_result = $stmt->get_result();
@@ -71,6 +78,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stored_hash = $row['password'];
 
             if (password_verify($password, $stored_hash) || md5($password) === $stored_hash) {
+
+                // 🚫 Prevent login if status is Pending or Rejected
+                if (isset($row['status']) && in_array($row['status'], ['Pending', 'Rejected'])) {
+                    echo "<script>alert('⚠️ Your faculty account is {$row['status']}. Please wait for admin approval.'); window.location='index.php';</script>";
+                    exit();
+                }
+
                 $login_success = true;
                 $user_role = "faculty";
                 $user_data = $row;

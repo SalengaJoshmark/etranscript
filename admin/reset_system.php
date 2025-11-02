@@ -55,6 +55,34 @@ if (isset($_POST['pdf_action_confirmed'])) {
     // refresh file list
     $pdfFiles = array_diff(scandir($pdfDir), array('.', '..'));
 }
+
+// ------------------------
+// EXPORT DATABASE
+// ------------------------
+if (isset($_POST['export_db'])) {
+    $backupFile = '../backups/backup_' . date("Y-m-d_H-i-s") . '.sql';
+    $dbName = $conn->query("SELECT DATABASE()")->fetch_row()[0];
+    $command = "mysqldump -u root " . escapeshellarg($dbName) . " > " . escapeshellarg($backupFile);
+    system($command, $output);
+
+    if (file_exists($backupFile)) {
+        $message = "✅ Database exported successfully to backups folder!";
+    } else {
+        $message = "❌ Failed to export database.";
+    }
+}
+
+// ------------------------
+// IMPORT DATABASE
+// ------------------------
+if (isset($_POST['import_db']) && isset($_FILES['sql_file']) && $_FILES['sql_file']['error'] === 0) {
+    $uploadedFile = $_FILES['sql_file']['tmp_name'];
+    $dbName = $conn->query("SELECT DATABASE()")->fetch_row()[0];
+    $command = "mysql -u root " . escapeshellarg($dbName) . " < " . escapeshellarg($uploadedFile);
+    system($command, $output);
+
+    $message = "✅ Database imported successfully!";
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -71,6 +99,7 @@ button:hover { background:#b91c1c; }
 .warning { background:#fef3c7; color:#92400e; padding:12px; border-radius:6px; margin-bottom:20px; }
 .back { display:inline-block; margin-top:20px; text-decoration:none; background:#1e40af; color:white; padding:8px 16px; border-radius:6px; }
 select { padding:8px; border-radius:5px; margin-right:10px; }
+input[type="file"] { margin-top:10px; }
 
 /* Modal styles */
 .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
@@ -104,6 +133,17 @@ select { padding:8px; border-radius:5px; margin-right:10px; }
     <p>No PDF files found.</p>
   <?php endif; ?>
 
+  <hr style="margin:40px 0; border:none; border-top:2px solid #e2e8f0;">
+
+  <h2>💾 Database Backup & Restore</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <button type="submit" name="export_db" style="background:#15803d;">⬇️ Export Database</button>
+  </form>
+  <form method="POST" enctype="multipart/form-data" style="margin-top:15px;">
+    <input type="file" name="sql_file" accept=".sql" required>
+    <button type="submit" name="import_db" style="background:#1e40af;">⬆️ Import Database</button>
+  </form>
+
   <?php if (!empty($message)): ?>
     <div class="success"><?= htmlspecialchars($message); ?></div>
   <?php endif; ?>
@@ -133,7 +173,6 @@ function showModal(action) {
     const modalPdfFile = document.getElementById('modalPdfFile');
     const modalPdfAction = document.getElementById('modalPdfAction');
 
-    // Reset hidden fields
     confirmRequests.value = '';
     modalPdfFile.value = '';
     modalPdfAction.value = '';

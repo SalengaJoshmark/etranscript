@@ -117,6 +117,7 @@ $student_id = $student['student_id'];
       <th>Status</th>
       <th>Remarks</th>
       <th>Documents</th>
+      <th>Action</th> <!-- ✅ Added column -->
     </tr>
     <?php
     $sql = "SELECT * FROM request WHERE student_id='$student_id' ORDER BY request_date DESC";
@@ -148,10 +149,13 @@ $student_id = $student['student_id'];
             echo "<td>—</td>";
         }
 
+        // ✅ Added View button
+        echo "<td><a class='btn-doc' href='../view_request.php?id={$r['request_id']}'>View</a></td>";
+
         echo "</tr>";
       }
     } else {
-      echo "<tr><td colspan='6'>No transcript requests found.</td></tr>";
+      echo "<tr><td colspan='7'>No transcript requests found.</td></tr>";
     }
     ?>
   </table>
@@ -160,7 +164,7 @@ $student_id = $student['student_id'];
   <div class="tips">
     <strong>Tips:</strong>
     <ul>
-      <li>Click "New Request" to submit a transcript request.</li>
+      <li>Click \"New Request\" to submit a transcript request.</li>
       <li>Check the status of your requests regularly.</li>
       <li>Approved requests will have downloadable approval notices.</li>
       <li>Update your profile for accurate records.</li>
@@ -170,3 +174,4 @@ $student_id = $student['student_id'];
 
 </body>
 </html>
+

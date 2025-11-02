@@ -12,7 +12,7 @@ $user_role = $_SESSION['user'];
 $email = $_SESSION['email'] ?? '';
 $logout_link = "logout.php";
 
-// ✅ Determine back links
+// Determine back links
 $source = $_GET['source'] ?? '';
 if ($user_role === 'admin') {
     $back_link = ($source === 'manage') ? 'admin/manage_request.php' : 'admin/admin_dashboard.php';
@@ -22,7 +22,7 @@ if ($user_role === 'admin') {
     $back_link = 'student/student_dashboard.php';
 }
 
-// ✅ Ensure request ID exists
+// Ensure request ID exists
 if (!isset($_GET['id'])) {
     header("Location: $back_link");
     exit();
@@ -30,7 +30,7 @@ if (!isset($_GET['id'])) {
 
 $request_id = intval($_GET['id']);
 
-// ✅ Fetch request + student info
+// Fetch request + student info
 $sql = "SELECT r.*, s.full_name AS student_name, s.email, s.course
         FROM request r
         JOIN student s ON r.student_id = s.student_id
@@ -47,8 +47,22 @@ if ($result->num_rows === 0) {
 $row = $result->fetch_assoc();
 $stmt->close();
 
-// ✅ Check if faculty already marked as "Checked"
+// Check if faculty already marked as "Checked"
 $is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) === 'checked');
+
+// Highlight date_needed based on urgency
+$date_needed_highlight = '';
+if (!empty($row['date_needed'])) {
+    $today = new DateTime();
+    $date_needed = new DateTime($row['date_needed']);
+    $interval = (int)$today->diff($date_needed)->format("%r%a");
+
+    if ($interval >= 0 && $interval <= 3) {
+        $date_needed_highlight = 'style="color:#dc2626; font-weight:600;"'; // red
+    } elseif ($interval >= 4 && $interval <= 7) {
+        $date_needed_highlight = 'style="color:#f97316; font-weight:600;"'; // orange
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -147,6 +161,10 @@ $is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) ==
       <p><strong>Remarks:</strong> <?= htmlspecialchars($row['remarks']) ?></p>
     <?php endif; ?>
 
+    <?php if (!empty($row['date_needed'])): ?>
+      <p><strong>Date Needed:</strong> <span <?= $date_needed_highlight ?>><?= htmlspecialchars($row['date_needed']) ?></span></p>
+    <?php endif; ?>
+
     <p><strong>Date Requested:</strong> <?= htmlspecialchars($row['request_date']) ?></p>
     <p><strong>Status:</strong>
       <?php
@@ -162,51 +180,51 @@ $is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) ==
     </p>
   </div>
 
-  <!-- ✅ Faculty Messages (visible to admin only) -->
-  <?php
-  // Fetch messages for this request
-  $msg_stmt = $conn->prepare("
-    SELECT fm.subject, fm.message, fm.sent_at, fm.is_read, f.full_name AS faculty_name
-    FROM faculty_messages fm
-    JOIN faculty f ON fm.faculty_id = f.faculty_id
-    WHERE fm.request_id = ?
-    ORDER BY fm.sent_at DESC
-  ");
-  $msg_stmt->bind_param("i", $request_id);
-  $msg_stmt->execute();
-  $messages = $msg_stmt->get_result();
+  <!-- Faculty Messages (visible to admin and faculty only) -->
+  <?php if ($user_role === 'admin' || $user_role === 'faculty'): ?>
+    <?php
+    $msg_stmt = $conn->prepare("
+      SELECT fm.subject, fm.message, fm.sent_at, fm.is_read, f.full_name AS faculty_name
+      FROM faculty_messages fm
+      JOIN faculty f ON fm.faculty_id = f.faculty_id
+      WHERE fm.request_id = ?
+      ORDER BY fm.sent_at DESC
+    ");
+    $msg_stmt->bind_param("i", $request_id);
+    $msg_stmt->execute();
+    $messages = $msg_stmt->get_result();
 
-  // Mark as read when admin views
-  if ($user_role === 'admin' && $messages->num_rows > 0) {
-      $update_read = $conn->prepare("UPDATE faculty_messages SET is_read = 1 WHERE request_id = ?");
-      $update_read->bind_param("i", $request_id);
-      $update_read->execute();
-      $update_read->close();
-  }
-  ?>
+    if ($user_role === 'admin' && $messages->num_rows > 0) {
+        $update_read = $conn->prepare("UPDATE faculty_messages SET is_read = 1 WHERE request_id = ?");
+        $update_read->bind_param("i", $request_id);
+        $update_read->execute();
+        $update_read->close();
+    }
+    ?>
 
-  <?php if ($messages->num_rows > 0): ?>
-    <div style="margin-top: 20px;">
-      <h3 style="color:#1e3a8a;">📩 Faculty Messages</h3>
-      <?php while ($msg = $messages->fetch_assoc()): ?>
-        <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:8px; margin-bottom:10px;">
-          <p style="margin:0;">
-            <strong>Subject:</strong> <?= htmlspecialchars($msg['subject']); ?><br>
-            <strong>From:</strong> <?= htmlspecialchars($msg['faculty_name']); ?> 
-            <span style="font-size:12px; color:#475569;">(<?= htmlspecialchars($msg['sent_at']); ?>)</span>
-          </p>
-          <p style="margin-top:8px;"><?= nl2br(htmlspecialchars($msg['message'])); ?></p>
-          <?php if ($msg['is_read'] == 0): ?>
-            <p style="font-size:12px;color:#0284c7;"><em>Unread</em></p>
-          <?php endif; ?>
-        </div>
-      <?php endwhile; ?>
-    </div>
+    <?php if ($messages->num_rows > 0): ?>
+      <div style="margin-top: 20px;">
+        <h3 style="color:#1e3a8a;">📩 Faculty Messages</h3>
+        <?php while ($msg = $messages->fetch_assoc()): ?>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:8px; margin-bottom:10px;">
+            <p style="margin:0;">
+              <strong>Subject:</strong> <?= htmlspecialchars($msg['subject']); ?><br>
+              <strong>From:</strong> <?= htmlspecialchars($msg['faculty_name']); ?> 
+              <span style="font-size:12px; color:#475569;">(<?= htmlspecialchars($msg['sent_at']); ?>)</span>
+            </p>
+            <p style="margin-top:8px;"><?= nl2br(htmlspecialchars($msg['message'])); ?></p>
+            <?php if ($msg['is_read'] == 0): ?>
+              <p style="font-size:12px;color:#0284c7;"><em>Unread</em></p>
+            <?php endif; ?>
+          </div>
+        <?php endwhile; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php $msg_stmt->close(); ?>
   <?php endif; ?>
 
-  <?php $msg_stmt->close(); ?>
-
-  <!-- ✅ Admin: Approve/Reject only if faculty checked -->
+  <!-- Admin: Approve/Reject only if faculty checked -->
   <?php if ($user_role === 'admin'): ?>
     <?php if ($is_checked_by_faculty): ?>
       <a href="approve_request.php?id=<?= $row['request_id'] ?>" 
@@ -225,7 +243,7 @@ $is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) ==
     <?php endif; ?>
   <?php endif; ?>
 
-  <div style="margin-top: 30px;">
+    <div style="margin-top: 30px;">
     <?php if ($user_role === 'admin'): ?>
         <a href="admin/manage_request.php" class="btn back" style="margin-right: 10px;">📂 Back to Manage Requests</a>
         <a href="admin/admin_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
@@ -235,10 +253,10 @@ $is_checked_by_faculty = (isset($row['status']) && strtolower($row['status']) ==
         <a href="faculty/faculty_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
 
     <?php else: ?>
+        <a href="student/my_requests.php" class="btn back" style="margin-right: 10px;">📄 Back to My Requests</a>
         <a href="student/student_dashboard.php" class="btn back">🏠 Back to Dashboard</a>
     <?php endif; ?>
   </div>
-</div>
 
 <!-- JavaScript Clock -->
 <script>

@@ -24,7 +24,7 @@ if (!isset($_GET['request_id'])) {
     die("Invalid request.");
 }
 $request_id = intval($_GET['request_id']);
-$stmt = $conn->prepare("SELECT r.request_id, s.full_name AS student_name, r.purpose, r.status
+$stmt = $conn->prepare("SELECT r.request_id, s.full_name AS student_name, r.purpose, r.status, r.date_needed
                         FROM request r
                         JOIN student s ON r.student_id = s.student_id
                         WHERE r.request_id = ?");
@@ -43,11 +43,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['message'])) {
         VALUES (?, ?, ?, ?, NOW(), 0)
         ");
         $stmt->bind_param("iiss", $faculty_id, $request_id, $subject, $message);
-
         $stmt->execute();
         $stmt->close();
 
-        // Optionally mark request as "Checked"
+        // Mark request as Checked
         $status = "Checked";
         $update = $conn->prepare("UPDATE request SET status = ? WHERE request_id = ?");
         $update->bind_param("si", $status, $request_id);
@@ -68,24 +67,88 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['message'])) {
 <meta charset="UTF-8">
 <title>Notify Admin | Faculty Message</title>
 <style>
-  body { font-family:"Poppins",sans-serif; background:linear-gradient(to right,#d6f0e8,#b7d6f2); margin:0; color:#1e293b; }
-  .container { width:90%; max-width:700px; margin:40px auto; background:white; padding:25px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+  body {
+    font-family:"Poppins",sans-serif;
+    background:linear-gradient(to right,#d6f0e8,#b7d6f2);
+    margin:0;
+    color:#1e293b;
+  }
+  .container {
+    width:90%;
+    max-width:700px;
+    margin:40px auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+  }
   h2 { color:#1e3a8a; }
-  textarea { width:100%; height:150px; padding:10px; border-radius:8px; border:1px solid #94a3b8; font-family:"Poppins",sans-serif; font-size:14px; resize:none; }
-  .btn { display:inline-block; background:#2563eb; color:white; padding:10px 18px; border:none; border-radius:6px; font-weight:500; cursor:pointer; transition:0.3s; }
+  textarea {
+    width:100%;
+    height:150px;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #94a3b8;
+    font-family:"Poppins",sans-serif;
+    font-size:14px;
+    resize:none;
+  }
+  .btn {
+    display:inline-block;
+    background:#2563eb;
+    color:white;
+    padding:10px 18px;
+    border:none;
+    border-radius:6px;
+    font-weight:500;
+    cursor:pointer;
+    transition:0.3s;
+  }
   .btn:hover { background:#1d4ed8; }
-  .back { text-decoration:none; color:#1e3a8a; display:inline-block; margin-top:15px; }
+  .back {
+    text-decoration:none;
+    color:#1e3a8a;
+    display:inline-block;
+    margin-top:15px;
+  }
   .error { color:red; margin-bottom:10px; }
+  .info-box {
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    padding:10px 15px;
+    border-radius:8px;
+    margin-bottom:15px;
+  }
+  .highlight {
+    color:#dc2626;
+    font-weight:600;
+  }
+  .clock {
+    font-size:14px;
+    font-weight:500;
+    color:#334155;
+    text-align:right;
+    margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <div class="clock" id="clock"></div>
   <h2>📩 Notify Admin</h2>
-  <p><b>Request ID:</b> <?= htmlspecialchars($request['request_id']); ?></p>
-  <p><b>Student:</b> <?= htmlspecialchars($request['student_name']); ?></p>
-  <p><b>Purpose:</b> <?= htmlspecialchars($request['purpose']); ?></p>
-  <p><b>Current Status:</b> <?= htmlspecialchars($request['status']); ?></p>
+
+  <div class="info-box">
+    <p><b>Request ID:</b> <?= htmlspecialchars($request['request_id']); ?></p>
+    <p><b>Student:</b> <?= htmlspecialchars($request['student_name']); ?></p>
+    <p><b>Purpose:</b> <?= htmlspecialchars($request['purpose']); ?></p>
+    <p><b>Date Needed:</b>
+      <span class="<?= (strtotime($request['date_needed']) - time()) < 259200 ? 'highlight' : ''; ?>">
+        <?= htmlspecialchars($request['date_needed']); ?>
+      </span>
+    </p>
+    <p><b>Current Status:</b> <?= htmlspecialchars($request['status']); ?></p>
+  </div>
 
   <form method="POST">
     <?php if (!empty($error)): ?><div class="error"><?= htmlspecialchars($error); ?></div><?php endif; ?>
@@ -96,6 +159,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['message'])) {
 
   <a href="department_requests.php" class="back">← Back to Department Requests</a>
 </div>
+
+<script>
+// 🕒 Real-time clock (updates every second)
+function updateClock() {
+  const now = new Date();
+  const formatted = now.toLocaleString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  document.getElementById('clock').textContent = formatted;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
 
 </body>
 </html>

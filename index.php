@@ -5,9 +5,7 @@
   <title>E-Scription | Login</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       font-family: "Poppins", sans-serif;
@@ -21,12 +19,9 @@
       overflow-x: hidden;
     }
 
-    /* Header */
     .header {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       background: #1e40af;
       color: white;
       padding: 15px 30px;
@@ -36,20 +31,25 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
       z-index: 10;
     }
+    .header h1 { font-size: 20px; margin: 0; white-space: nowrap; }
+    .header span { font-size: 13px; opacity: 0.9; text-align: right; }
 
-    .header h1 {
-      font-size: 20px;
-      margin: 0;
-      white-space: nowrap;
+    /* Subtle background illustration */
+    .illustration {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 280px;
+      opacity: 0.2;
+      animation: float 4s ease-in-out infinite alternate;
+      z-index: 0;
     }
 
-    .header span {
-      font-size: 13px;
-      opacity: 0.9;
-      text-align: right;
+    @keyframes float {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); }
     }
 
-    /* Login Box */
     .login-box {
       background: #ffffff;
       padding: 40px 45px;
@@ -60,6 +60,7 @@
       text-align: center;
       margin-top: 110px;
       animation: fadeIn 0.4s ease-in-out;
+      z-index: 2;
     }
 
     @keyframes fadeIn {
@@ -89,33 +90,19 @@
       box-shadow: 0 0 3px rgba(30,64,175,0.3);
     }
 
-    .password-container {
-      position: relative;
-      width: 100%;
-    }
-
-    .password-container input {
-      padding-right: 40px;
-    }
+    .password-container { position: relative; width: 100%; }
+    .password-container input { padding-right: 40px; }
 
     .toggle-password {
       position: absolute;
-      top: 50%;
-      right: 10px;
+      top: 50%; right: 10px;
       transform: translateY(-50%);
       cursor: pointer;
       color: #64748b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px;
     }
-
-    .toggle-password svg {
-      width: 22px;
-      height: 22px;
-    }
+    .toggle-password svg { width: 22px; height: 22px; }
 
     button {
       width: 100%;
@@ -130,41 +117,30 @@
       transition: 0.3s;
       margin-top: 5px;
     }
-
     button:hover {
       background: #1d4ed8;
       transform: translateY(-1px);
     }
 
-    .forgot-password {
-      margin-top: 12px;
-    }
-
+    .forgot-password { margin-top: 12px; }
     .forgot-password a {
       color: #1e3a8a;
       font-size: 13.5px;
       text-decoration: none;
     }
-
-    .forgot-password a:hover {
-      text-decoration: underline;
-    }
+    .forgot-password a:hover { text-decoration: underline; }
 
     .create-account {
       margin-top: 22px;
       font-size: 14px;
       color: #374151;
     }
-
     .create-account a {
       color: #1e3a8a;
       text-decoration: none;
       font-weight: 500;
     }
-
-    .create-account a:hover {
-      text-decoration: underline;
-    }
+    .create-account a:hover { text-decoration: underline; }
 
     footer {
       position: fixed;
@@ -173,11 +149,20 @@
       color: #475569;
       text-align: center;
     }
+
+    /* New Tagline area */
+    .tagline {
+      margin-top: 20px;
+      color: #1e3a8a;
+      font-size: 14px;
+      opacity: 0.8;
+      text-align: center;
+      animation: fadeIn 0.6s ease-in;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Header -->
   <div class="header">
     <h1>E-Scription Transcript Request System</h1>
     <span>Automated & Secure Academic Document Requests</span>
@@ -186,21 +171,18 @@
   <!-- Login Box -->
   <div class="login-box">
     <h2>Login</h2>
-
     <form method="POST" action="login.php">
       <input type="text" name="email" placeholder="Email" required>
 
       <div class="password-container">
         <input type="password" name="password" id="password" placeholder="Password" required>
         <span class="toggle-password" onclick="togglePassword()">
-          <!-- Eye Icon (Visible) -->
           <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
-          <!-- Eye Off Icon (Hidden) -->
           <svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.348-3.63M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M6.1 6.1l11.8 11.8" />
@@ -218,13 +200,16 @@
     <div class="create-account">
       Don’t have an account? <a href="register.php">Create Account</a>
     </div>
+
+    <div class="tagline">📜 Access and manage transcripts with ease.</div>
   </div>
+
+  <img src="https://cdn-icons-png.flaticon.com/512/3159/3159310.png" alt="Illustration" class="illustration">
 
   <footer>
     © 2025 E-Transcript Request System | Developed for Academic Purposes
   </footer>
 
-  <!-- JS -->
   <script>
     function togglePassword() {
       const passwordField = document.getElementById("password");
