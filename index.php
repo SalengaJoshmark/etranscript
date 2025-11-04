@@ -34,7 +34,6 @@
     .header h1 { font-size: 20px; margin: 0; white-space: nowrap; }
     .header span { font-size: 13px; opacity: 0.9; text-align: right; }
 
-    /* Subtle background illustration */
     .illustration {
       position: fixed;
       bottom: 0;
@@ -104,6 +103,19 @@
     }
     .toggle-password svg { width: 22px; height: 22px; }
 
+    .remember-container {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #374151;
+    }
+    .remember-container input {
+      margin-right: 6px;
+      accent-color: #1e40af;
+    }
+
     button {
       width: 100%;
       padding: 12px;
@@ -150,7 +162,6 @@
       text-align: center;
     }
 
-    /* New Tagline area */
     .tagline {
       margin-top: 20px;
       color: #1e3a8a;
@@ -168,11 +179,10 @@
     <span>Automated & Secure Academic Document Requests</span>
   </div>
 
-  <!-- Login Box -->
   <div class="login-box">
     <h2>Login</h2>
-    <form method="POST" action="login.php">
-      <input type="text" name="email" placeholder="Email" required>
+    <form method="POST" action="login.php" onsubmit="saveEmail()">
+      <input type="text" id="email" name="email" placeholder="Email" required>
 
       <div class="password-container">
         <input type="password" name="password" id="password" placeholder="Password" required>
@@ -188,6 +198,11 @@
               d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.97 9.97 0 012.348-3.63M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-.88M6.1 6.1l11.8 11.8" />
           </svg>
         </span>
+      </div>
+
+      <div class="remember-container">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">Remember my email</label>
       </div>
 
       <button type="submit">Login</button>
@@ -211,6 +226,7 @@
   </footer>
 
   <script>
+    // Password toggle
     function togglePassword() {
       const passwordField = document.getElementById("password");
       const eyeOpen = document.getElementById("eye-open");
@@ -224,6 +240,28 @@
         passwordField.type = "password";
         eyeOpen.style.display = "block";
         eyeClosed.style.display = "none";
+      }
+    }
+
+    // Remember email feature
+    const emailField = document.getElementById("email");
+    const rememberBox = document.getElementById("rememberMe");
+
+    // Load saved email on page load
+    window.addEventListener("load", () => {
+      const savedEmail = localStorage.getItem("rememberedEmail");
+      if (savedEmail) {
+        emailField.value = savedEmail;
+        rememberBox.checked = true;
+      }
+    });
+
+    // Save email if checked
+    function saveEmail() {
+      if (rememberBox.checked) {
+        localStorage.setItem("rememberedEmail", emailField.value);
+      } else {
+        localStorage.removeItem("rememberedEmail");
       }
     }
   </script>

@@ -11,17 +11,27 @@ if (!isset($_SESSION['user']) || $_SESSION['user'] !== 'admin') {
 $message = "";
 
 // ------------------------
-// DELETE REQUEST DATA
+// DELETE SELECTED REQUEST DATA
 // ------------------------
-if (isset($_POST['confirm_delete_requests']) && $_POST['confirm_delete_requests'] === 'yes') {
+if (isset($_POST['confirm_delete_requests']) && !empty($_POST['selected_tables'])) {
+    $tables = $_POST['selected_tables'];
+
     try {
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
-        mysqli_query($conn, "TRUNCATE TABLE faculty_messages");
-        mysqli_query($conn, "TRUNCATE TABLE transaction_log");
-        mysqli_query($conn, "TRUNCATE TABLE request");
+
+        if (in_array("faculty_messages", $tables)) {
+            mysqli_query($conn, "TRUNCATE TABLE faculty_messages");
+        }
+        if (in_array("transaction_log", $tables)) {
+            mysqli_query($conn, "TRUNCATE TABLE transaction_log");
+        }
+        if (in_array("request", $tables)) {
+            mysqli_query($conn, "TRUNCATE TABLE request");
+        }
+
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
 
-        $message = "✅ All system request-related records have been cleared successfully!";
+        $message = "✅ Selected data (" . implode(", ", $tables) . ") have been cleared successfully!";
     } catch (Exception $e) {
         $message = "❌ Error clearing tables: " . $e->getMessage();
     }
@@ -110,14 +120,20 @@ input[type="file"] { margin-top:10px; }
 <body>
 
 <div class="container">
-  <h2>⚠️ Reset All Request Data</h2>
+  <h2>⚠️ Reset Request Data</h2>
   <p class="warning">
-    This will permanently delete <b>all transcript requests, transaction logs, and faculty messages</b>.<br>
-    The tables will be reset and auto-increment IDs will restart from 1.<br>
+    Choose which parts of request-related data to delete.<br>
     This action <b>cannot be undone</b>.
   </p>
 
-  <button onclick="showModal('requests')">🚨 Delete All Request Data</button>
+  <form method="POST" id="deleteRequestsForm">
+    <select name="selected_tables[]" multiple required size="3" style="width:250px;">
+      <option value="request">Transcript Requests</option>
+      <option value="transaction_log">Transaction Logs</option>
+      <option value="faculty_messages">Faculty Messages</option>
+    </select><br>
+    <button type="button" onclick="showModal('requests')">🚨 Delete Selected Data</button>
+  </form>
 
   <h2>🗂 Manage Generated PDFs</h2>
   <?php if (!empty($pdfFiles)): ?>
@@ -156,7 +172,8 @@ input[type="file"] { margin-top:10px; }
   <div class="modal-content">
     <p id="modalText"></p>
     <form method="POST" id="modalForm">
-      <input type="hidden" name="confirm_delete_requests" id="confirmDeleteRequests">
+      <input type="hidden" name="confirm_delete_requests" value="yes">
+      <div id="selectedTablesContainer"></div>
       <input type="hidden" name="pdf_file" id="modalPdfFile">
       <input type="hidden" name="pdf_action_confirmed" id="modalPdfAction">
       <button type="submit" id="yesBtn">Yes</button>
@@ -169,23 +186,35 @@ input[type="file"] { margin-top:10px; }
 function showModal(action) {
     const modal = document.getElementById('confirmModal');
     const modalText = document.getElementById('modalText');
-    const confirmRequests = document.getElementById('confirmDeleteRequests');
     const modalPdfFile = document.getElementById('modalPdfFile');
     const modalPdfAction = document.getElementById('modalPdfAction');
+    const selectedTablesContainer = document.getElementById('selectedTablesContainer');
+    selectedTablesContainer.innerHTML = '';
 
-    confirmRequests.value = '';
     modalPdfFile.value = '';
     modalPdfAction.value = '';
 
-    if(action === 'requests'){
-        modalText.innerText = 'Are you sure you want to delete ALL request data? This cannot be undone!';
-        confirmRequests.value = 'yes';
-    } else if(action === 'deleteOne'){
+    if (action === 'requests') {
+        const selectedOptions = Array.from(document.querySelector('select[name="selected_tables[]"]').selectedOptions);
+        if (selectedOptions.length === 0) {
+            alert("Please select at least one table to delete.");
+            return;
+        }
+        const tableNames = selectedOptions.map(o => o.textContent);
+        modalText.innerText = "Are you sure you want to delete the following data?\n• " + tableNames.join("\n• ");
+        selectedOptions.forEach(opt => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'selected_tables[]';
+            hiddenInput.value = opt.value;
+            selectedTablesContainer.appendChild(hiddenInput);
+        });
+    } else if (action === 'deleteOne') {
         const selectedPdf = document.getElementById('pdfSelect').value;
         modalText.innerText = `Are you sure you want to delete the PDF "${selectedPdf}"?`;
         modalPdfFile.value = selectedPdf;
         modalPdfAction.value = 'delete_one';
-    } else if(action === 'deleteAll'){
+    } else if (action === 'deleteAll') {
         modalText.innerText = 'Are you sure you want to delete ALL PDFs?';
         modalPdfAction.value = 'delete_all';
     }
